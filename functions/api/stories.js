@@ -10,16 +10,23 @@ export async function onRequestGet({ request, env }) {
   const status = url.searchParams.get("status");
 
   let sql = `
-    SELECT s.id, s.title, s.description, s.genres, s.status, s.views, s.updated_at,
+    SELECT s.id, s.title, s.description, s.genres, s.status, s.views, s.updated_at, s.cover,
            u.username AS author_name,
            (SELECT COUNT(*) FROM chapters c WHERE c.story_id = s.id) AS chapter_count,
+           (SELECT MAX(chapter_number) FROM chapters c WHERE c.story_id = s.id) AS latest_chapter,
            (SELECT AVG(rating) FROM ratings r WHERE r.story_id = s.id) AS avg_rating
     FROM stories s
     JOIN users u ON u.id = s.author_id
     WHERE s.approval_status = 'approved'
   `;
   const params = [];
-  if (genre) { sql += " AND s.genres LIKE ?"; params.push(`%${genre}%`); }
+  if (genre) {
+    // supports multiple comma-separated tags: story must match ALL of them
+    genre.split(",").map(g => g.trim()).filter(Boolean).forEach(g => {
+      sql += " AND s.genres LIKE ?";
+      params.push(`%${g}%`);
+    });
+  }
   if (q) { sql += " AND s.title LIKE ?"; params.push(`%${q}%`); }
   if (status) { sql += " AND s.status = ?"; params.push(status); }
   if (mood) {
@@ -51,12 +58,14 @@ export async function onRequestPost({ request, env }) {
   const now = Date.now();
   const approvalStatus = user.role === "admin" ? "approved" : "pending";
 
+  if (body.cover && body.cover.length > 300000) return badRequest("Cover image is too large.");
+
   const result = await env.DB.prepare(
-    `INSERT INTO stories (title, author_id, description, genres, status, approval_status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO stories (title, author_id, description, genres, status, approval_status, cover, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     body.title, user.id, body.description || "", body.genres || "",
-    body.status || "ongoing", approvalStatus, now, now
+    body.status || "ongoing", approvalStatus, body.cover || null, now, now
   ).run();
 
   return json({ id: result.meta.last_row_id, approval_status: approvalStatus });

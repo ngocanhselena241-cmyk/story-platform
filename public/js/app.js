@@ -30,25 +30,40 @@ async function renderNav() {
   let user = null;
   try { ({ user } = await api("/api/me")); } catch (e) {}
 
-  const links = [`<a href="/index.html">Home</a>`];
+  let profile = null;
   if (user) {
-    if (user.role === "uploader" || user.role === "admin") links.push(`<a href="/upload.html">Upload</a>`);
-    if (user.role === "admin") links.push(`<a href="/admin.html">Admin</a>`);
-    links.push(`<a href="/library.html">Library</a>`);
-    links.push(`<a href="/quotes.html">My Quotes</a>`);
-    links.push(`<a href="/stats.html">Stats</a>`);
-    links.push(`<span class="muted">Hi, ${escapeHtml(user.username)}</span>`);
-    links.push(`<a href="#" id="logout-link">Log out</a>`);
-  } else {
-    links.push(`<a href="/login.html">Log in</a>`);
-    links.push(`<a href="/signup.html">Sign up</a>`);
+    try { ({ profile } = await api("/api/profile")); } catch (e) {}
   }
-  links.push(`<button class="theme-toggle" id="theme-btn">🌓</button>`);
+
+  const mainLinks = [`<a href="/index.html">Home</a>`];
+  if (user && (user.role === "uploader" || user.role === "admin")) mainLinks.push(`<a href="/upload.html">Upload</a>`);
+  if (user && user.role === "admin") mainLinks.push(`<a href="/admin.html">Admin</a>`);
+
+  let rightSide;
+  if (user) {
+    const avatarEl = profile && profile.avatar
+      ? `<img class="profile-avatar" src="${profile.avatar}" alt="">`
+      : `<div class="profile-avatar">${escapeHtml(user.username[0].toUpperCase())}</div>`;
+    rightSide = `
+      <div class="profile-menu">
+        <div class="profile-trigger">${avatarEl}<span>${escapeHtml(user.username)}</span></div>
+        <div class="profile-dropdown">
+          <a href="/profile.html">Your profile</a>
+          <a href="/library.html">Library</a>
+          <a href="/stats.html">Stats</a>
+          <a href="/quotes.html">My Quotes</a>
+          <a href="/settings.html">Settings</a>
+          <a href="#" id="logout-link">Log out</a>
+        </div>
+      </div>`;
+  } else {
+    rightSide = `<a href="/login.html">Log in</a> <a href="/signup.html" class="btn small">Sign up</a>`;
+  }
 
   el.innerHTML = `
     <nav class="topnav"><div class="container">
-      <a class="brand" href="/index.html">My Stories</a>
-      <div class="nav-links">${links.join("")}</div>
+      <a class="brand" href="/index.html">Nayedaba</a>
+      <div class="nav-links">${mainLinks.join("")}<button class="theme-toggle" id="theme-btn">🌓</button>${rightSide}</div>
     </div></nav>`;
 
   document.getElementById("theme-btn").onclick = toggleTheme;
@@ -77,4 +92,45 @@ function timeAgo(ts) {
     if (val >= 1) return `${val} ${name}${val > 1 ? "s" : ""} ago`;
   }
   return "just now";
+}
+
+// ---- Image helper: pick a file, resize it, return base64 data URL ----
+function pickAndResizeImage(maxWidth, callback) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = () => {
+    const file = input.files[0];
+    if (!file) return;
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      callback(canvas.toDataURL("image/jpeg", 0.8));
+    };
+    img.src = URL.createObjectURL(file);
+  };
+  input.click();
+}
+
+// ---- Cover card renderer (used on homepage grids) ----
+function renderCoverCard(s) {
+  const rating = s.avg_rating ? Number(s.avg_rating).toFixed(1) : "—";
+  const coverEl = s.cover
+    ? `<img src="${s.cover}" alt="">`
+    : `<div class="cover-placeholder">${escapeHtml(s.title)}</div>`;
+  const tags = (s.genres || "").split(",").map(g => g.trim()).filter(Boolean)
+    .map(g => `<span class="tag">${escapeHtml(g)}</span>`).join(" ");
+  return `<a class="cover-card" href="/story.html?id=${s.id}">
+    ${coverEl}
+    <div class="cover-info">⭐ ${rating} · 👁 ${s.views}${s.latest_chapter ? ` · Ch. ${s.latest_chapter}` : ""}</div>
+    <div class="cover-hover">
+      <h4>${escapeHtml(s.title)}</h4>
+      <div>${tags}</div>
+      <div style="overflow:hidden;">${escapeHtml((s.description || "").slice(0, 220))}</div>
+    </div>
+  </a>`;
 }

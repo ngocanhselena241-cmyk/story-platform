@@ -1,0 +1,3 @@
+ALTER TABLE users ADD COLUMN avatar TEXT;
+ALTER TABLE stories ADD COLUMN cover TEXT;
+ALTER TABLE comments ADD COLUMN paragraph_index INTEGER;

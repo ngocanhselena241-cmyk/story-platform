@@ -3,69 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Stories</title>
+<title>Nayedaba</title>
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 <div id="nav"></div>
 <div class="container" style="padding-top:24px;">
 
-  <div style="margin-bottom:20px;display:flex;gap:10px;">
-    <input id="search" placeholder="🔍 Search stories by title..." style="flex:1;">
-    <select id="sort-select" style="max-width:160px;">
+  <div style="margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap;">
+    <input id="search" placeholder="🔍 Search stories by title..." style="flex:1;min-width:180px;">
+    <select id="sort-select" style="max-width:170px;">
       <option value="updated">Recently Updated</option>
       <option value="popular">Most Popular</option>
       <option value="rating">Highest Rated</option>
       <option value="new">Newest</option>
     </select>
-    <select id="status-select" style="max-width:140px;">
+    <select id="status-select" style="max-width:130px;">
       <option value="">All Status</option>
       <option value="ongoing">Ongoing</option>
       <option value="completed">Completed</option>
       <option value="hiatus">Hiatus</option>
     </select>
+    <div class="tags-dropdown">
+      <button class="secondary" id="tags-toggle">Tags ▾</button>
+      <div class="tags-panel" id="tags-panel"></div>
+    </div>
   </div>
-
-  <div class="section-title">Browse by Mood</div>
-  <div id="mood-browse" style="margin-bottom:10px;"></div>
 
   <div id="continue-section"></div>
   <div id="recommend-section"></div>
-  <div id="gems-section"></div>
 
   <div class="section-title">✨ Recently Updated</div>
-  <div id="story-list"><p class="muted">Loading...</p></div>
+  <div id="recent-list" class="story-grid"><p class="muted">Loading...</p></div>
+
+  <div class="section-title">📚 All Stories</div>
+  <div id="story-list" class="story-grid"><p class="muted">Loading...</p></div>
 
 </div>
 
 <script src="/js/app.js"></script>
 <script>
+let selectedTags = [];
+
 async function load() {
   const user = await renderNav();
 
-  const MOODS = ["😭", "❤️", "🔥", "😂", "😱", "💀", "⚡"];
-  document.getElementById("mood-browse").innerHTML = MOODS.map(m =>
-    `<button class="mood-filter-btn secondary" data-mood="${m}" style="font-size:1.2rem;margin-right:8px;">${m}</button>`
-  ).join("");
-  document.querySelectorAll(".mood-filter-btn").forEach(btn => {
-    btn.onclick = async () => {
-      const { stories } = await api(`/api/stories?mood=${encodeURIComponent(btn.dataset.mood)}`);
-      document.getElementById("story-list").innerHTML = stories.length
-        ? stories.map(renderStoryCard).join("")
-        : `<p class="muted">No stories tagged with this mood yet.</p>`;
-    };
-  });
-
+  // Tags panel
   try {
-    const { stories } = await api("/api/hidden-gems");
-    if (stories.length) {
-      document.getElementById("gems-section").innerHTML =
-        `<div class="section-title">💎 Hidden Gems</div>` +
-        stories.map(s => `<div class="card story-card">
-          <a href="/story.html?id=${s.id}"><h3>${escapeHtml(s.title)}</h3></a>
-          <div class="story-meta">⭐ ${Number(s.avg_rating).toFixed(1)} · 👁 ${s.views}</div>
-        </div>`).join("");
-    }
+    const { tags } = await api("/api/tags");
+    document.getElementById("tags-panel").innerHTML = tags.length
+      ? tags.map(t => `<label><input type="checkbox" value="${escapeHtml(t)}"> ${escapeHtml(t)}</label>`).join("")
+      : `<span class="muted">No tags yet</span>`;
+    document.querySelectorAll("#tags-panel input").forEach(cb => {
+      cb.onchange = () => {
+        selectedTags = [...document.querySelectorAll("#tags-panel input:checked")].map(c => c.value);
+        loadStoryList();
+      };
+    });
   } catch (e) {}
 
   if (user) {
@@ -90,20 +84,20 @@ async function load() {
       const { stories, based_on } = await api("/api/recommendations");
       if (stories.length) {
         document.getElementById("recommend-section").innerHTML =
-          `<div class="section-title">🪄 Because you liked ${escapeHtml(based_on)}</div>` +
-          stories.map(s => `<div class="card story-card">
-            <a href="/story.html?id=${s.id}"><h3>${escapeHtml(s.title)}</h3></a>
-            <div class="story-meta">⭐ ${s.avg_rating ? Number(s.avg_rating).toFixed(1) : "—"} · 👁 ${s.views}</div>
-          </div>`).join("");
+          `<div class="section-title">🪄 Because you liked ${escapeHtml(based_on)}</div>
+           <div class="story-grid">${stories.map(renderCoverCard).join("")}</div>`;
       }
     } catch (e) {}
   }
 
   try {
-    await loadStoryList();
-  } catch (e) {
-    document.getElementById("story-list").innerHTML = `<p class="error-msg">Couldn't load stories.</p>`;
-  }
+    const { stories } = await api("/api/stories?sort=updated");
+    document.getElementById("recent-list").innerHTML = stories.length
+      ? stories.slice(0, 3).map(renderCoverCard).join("")
+      : `<p class="muted">No stories yet.</p>`;
+  } catch (e) {}
+
+  loadStoryList();
 }
 
 async function loadStoryList() {
@@ -113,25 +107,27 @@ async function loadStoryList() {
   let url = `/api/stories?sort=${sort}`;
   if (status) url += `&status=${status}`;
   if (q) url += `&q=${encodeURIComponent(q)}`;
-  const { stories } = await api(url);
-  document.getElementById("story-list").innerHTML = stories.length
-    ? stories.map(renderStoryCard).join("")
-    : `<p class="muted">No stories matched.</p>`;
+  if (selectedTags.length) url += `&genre=${encodeURIComponent(selectedTags.join(","))}`;
+  try {
+    const { stories } = await api(url);
+    document.getElementById("story-list").innerHTML = stories.length
+      ? stories.map(renderCoverCard).join("")
+      : `<p class="muted">No stories matched.</p>`;
+  } catch (e) {
+    document.getElementById("story-list").innerHTML = `<p class="error-msg">Couldn't load stories.</p>`;
+  }
 }
 
-function renderStoryCard(s) {
-  const rating = s.avg_rating ? Number(s.avg_rating).toFixed(1) : "—";
-  const genres = (s.genres || "").split(",").filter(Boolean).map(g => `<span class="tag">${escapeHtml(g.trim())}</span>`).join(" ");
-  return `<div class="card story-card">
-    <a href="/story.html?id=${s.id}"><h3>${escapeHtml(s.title)}</h3></a>
-    <div class="story-meta">⭐ ${rating} · 👁 ${s.views} · Ch. ${s.chapter_count} · by ${escapeHtml(s.author_name)} · updated ${timeAgo(s.updated_at)}</div>
-    <div>${genres}</div>
-  </div>`;
-}
-
+document.getElementById("tags-toggle").onclick = () => {
+  document.getElementById("tags-panel").classList.toggle("open");
+};
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".tags-dropdown")) {
+    document.getElementById("tags-panel").classList.remove("open");
+  }
+});
 document.getElementById("search").addEventListener("keydown", (e) => {
-  if (e.key !== "Enter") return;
-  loadStoryList();
+  if (e.key === "Enter") loadStoryList();
 });
 document.getElementById("sort-select").addEventListener("change", loadStoryList);
 document.getElementById("status-select").addEventListener("change", loadStoryList);

@@ -34,10 +34,15 @@ async function load() {
       : `<p class="muted">No chapters yet.</p>`;
 
     document.getElementById("content").innerHTML = `
-      <h1>${escapeHtml(story.title)}</h1>
-      <div class="story-meta">by ${escapeHtml(story.author_name)} · ${story.status} · ⭐ ${rating} (${story.rating_count} ratings) · 👁 ${story.views}</div>
-      <div style="margin:10px 0;">${genres}</div>
-      <p>${escapeHtml(story.description)}</p>
+      <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
+        ${story.cover ? `<img src="${story.cover}" style="width:160px;border-radius:10px;">` : ""}
+        <div style="flex:1;min-width:240px;">
+          <h1 style="margin-top:0;">${escapeHtml(story.title)} <span id="edit-slot"></span></h1>
+          <div class="story-meta">by ${escapeHtml(story.author_name)} · ${story.status} · ⭐ ${rating} (${story.rating_count} ratings) · 👁 ${story.views}</div>
+          <div style="margin:10px 0;">${genres}</div>
+          <p>${escapeHtml(story.description)}</p>
+        </div>
+      </div>
       ${chapters.length ? `<a class="btn" href="/read.html?story=${storyId}&chapter=${chapters[0].chapter_number}">Start Reading</a>` : ""}
       ${currentUser ? `<div id="library-box" style="margin-top:16px;">
         <label>Add to your library</label>
@@ -97,6 +102,16 @@ async function load() {
         if (!libSelect.value) return;
         await api("/api/library", { method: "POST", body: JSON.stringify({ story_id: storyId, status: libSelect.value }) });
       };
+    }
+
+    if (currentUser) {
+      try {
+        const { stories: mine } = await api("/api/my-stories");
+        if (mine.some(s => String(s.id) === String(storyId))) {
+          document.getElementById("edit-slot").innerHTML =
+            `<a class="btn secondary small" href="/upload.html?story=${storyId}">✏️ Edit</a>`;
+        }
+      } catch (e) {}
     }
   } catch (e) {
     document.getElementById("content").innerHTML = `<p class="error-msg">Couldn't load this story.</p>`;

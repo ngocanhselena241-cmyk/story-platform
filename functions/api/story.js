@@ -36,11 +36,13 @@ export async function onRequestPut({ request, env }) {
   if (!story) return json({ error: "Story not found." }, 404);
   if (story.author_id !== user.id && user.role !== "admin") return forbidden();
 
+  if (body.cover && body.cover.length > 300000) return badRequest("Cover image is too large.");
+
   await env.DB.prepare(
-    `UPDATE stories SET title = ?, description = ?, genres = ?, status = ?, updated_at = ? WHERE id = ?`
+    `UPDATE stories SET title = ?, description = ?, genres = ?, status = ?, cover = COALESCE(?, cover), updated_at = ? WHERE id = ?`
   ).bind(
     body.title, body.description || "", body.genres || "", body.status || "ongoing",
-    Date.now(), body.id
+    body.cover || null, Date.now(), body.id
   ).run();
 
   return json({ ok: true });

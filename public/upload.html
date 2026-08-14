@@ -3,33 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Upload</title>
+<title>Upload — Nayedaba</title>
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 <div id="nav"></div>
-<div class="container" style="padding-top:24px;max-width:600px;">
+<div class="container" style="padding-top:24px;max-width:640px;">
   <div id="gate"><p class="muted">Loading...</p></div>
 </div>
 
 <script src="/js/app.js"></script>
 <script>
+let coverData = null;
+let editingStoryId = null;
+
 async function load() {
   const user = await renderNav();
   const gate = document.getElementById("gate");
   if (!user) { gate.innerHTML = `<p>You need to <a href="/login.html">log in</a> first.</p>`; return; }
   if (user.role !== "uploader" && user.role !== "admin") {
-    gate.innerHTML = `<p>Your account isn't an uploader yet. Ask an admin to upgrade your role (Admin panel → set role).</p>`;
+    gate.innerHTML = `<p>Your account isn't an uploader yet. Ask an admin to upgrade your role.</p>`;
     return;
   }
 
   gate.innerHTML = `
-    <h1>Post a new story</h1>
+    <h1 id="form-title">Post a new story</h1>
+
+    <div class="section-title">My stories</div>
+    <div id="my-stories"><p class="muted">Loading...</p></div>
+
+    <div class="section-title" id="story-form-title">New story</div>
     <label>Title</label>
     <input id="title">
     <label>Description</label>
     <textarea id="description" rows="3"></textarea>
-    <label>Genres (comma-separated)</label>
+    <label>Tags (comma-separated)</label>
     <input id="genres" placeholder="Fantasy, Yuri, Slow Burn">
     <label>Status</label>
     <select id="status">
@@ -37,11 +45,18 @@ async function load() {
       <option value="completed">Completed</option>
       <option value="hiatus">Hiatus</option>
     </select>
+    <label>Cover image (optional)</label>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="secondary" id="cover-btn">Choose image</button>
+      <img id="cover-preview" style="display:none;width:70px;border-radius:6px;">
+    </div>
     <button id="create-btn" style="margin-top:16px;">Create story</button>
+    <button id="cancel-edit-btn" class="secondary" style="margin-top:16px;display:none;">Cancel editing</button>
     <div id="create-msg" class="error-msg"></div>
 
     <div id="chapter-section" style="display:none;margin-top:40px;">
-      <div class="section-title">Add a chapter</div>
+      <div class="section-title">Chapters for: <span id="chapter-story-name"></span></div>
+      <div id="chapter-list" style="margin-bottom:14px;"></div>
       <label>Chapter number</label>
       <input id="chap-num" type="number" min="1">
       <label>Chapter title (optional)</label>
@@ -53,46 +68,146 @@ async function load() {
     </div>
   `;
 
-  let storyId = null;
-
-  document.getElementById("create-btn").onclick = async () => {
-    try {
-      const res = await api("/api/stories", { method: "POST", body: JSON.stringify({
-        title: document.getElementById("title").value,
-        description: document.getElementById("description").value,
-        genres: document.getElementById("genres").value,
-        status: document.getElementById("status").value
-      })});
-      storyId = res.id;
-      document.getElementById("create-msg").className = "success-msg";
-      document.getElementById("create-msg").textContent = res.approval_status === "approved"
-        ? "Story created and live!" : "Story created — waiting on admin approval before it appears publicly.";
-      document.getElementById("chapter-section").style.display = "block";
-    } catch (e) {
-      document.getElementById("create-msg").className = "error-msg";
-      document.getElementById("create-msg").textContent = e.message;
-    }
+  document.getElementById("cover-btn").onclick = () => {
+    pickAndResizeImage(400, (dataUrl) => {
+      coverData = dataUrl;
+      const prev = document.getElementById("cover-preview");
+      prev.src = dataUrl;
+      prev.style.display = "block";
+    });
   };
 
-  document.getElementById("chap-btn").onclick = async () => {
-    try {
-      await api("/api/chapter", { method: "POST", body: JSON.stringify({
-        story_id: storyId,
-        chapter_number: Number(document.getElementById("chap-num").value),
-        title: document.getElementById("chap-title").value,
-        content: document.getElementById("chap-content").value
-      })});
-      document.getElementById("chap-msg").className = "success-msg";
-      document.getElementById("chap-msg").textContent = "Chapter published!";
-      document.getElementById("chap-num").value = "";
-      document.getElementById("chap-title").value = "";
-      document.getElementById("chap-content").value = "";
-    } catch (e) {
-      document.getElementById("chap-msg").className = "error-msg";
-      document.getElementById("chap-msg").textContent = e.message;
-    }
-  };
+  document.getElementById("create-btn").onclick = saveStory;
+  document.getElementById("cancel-edit-btn").onclick = resetForm;
+  document.getElementById("chap-btn").onclick = saveChapter;
+
+  await loadMyStories();
+
+  // Deep link: upload.html?story=ID (from Edit buttons elsewhere)
+  const linkedStory = new URLSearchParams(location.search).get("story");
+  if (linkedStory) startEditing(Number(linkedStory));
 }
+
+let myStories = [];
+
+async function loadMyStories() {
+  const { stories } = await api("/api/my-stories");
+  myStories = stories;
+  document.getElementById("my-stories").innerHTML = stories.length
+    ? stories.map(s => `<div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <strong>${escapeHtml(s.title)}</strong>
+          <span class="muted" style="font-size:0.8rem;"> · ${s.chapter_count} ch · ${s.approval_status}</span>
+        </div>
+        <button class="small manage-btn" data-id="${s.id}">Manage</button>
+      </div>`).join("")
+    : `<p class="muted">You haven't posted any stories yet.</p>`;
+  document.querySelectorAll(".manage-btn").forEach(btn => {
+    btn.onclick = () => startEditing(Number(btn.dataset.id));
+  });
+}
+
+async function startEditing(storyId) {
+  const s = myStories.find(x => x.id === storyId);
+  if (!s) return;
+  editingStoryId = storyId;
+  coverData = null;
+  document.getElementById("story-form-title").textContent = "Edit story";
+  document.getElementById("title").value = s.title;
+  document.getElementById("description").value = s.description || "";
+  document.getElementById("genres").value = s.genres || "";
+  document.getElementById("status").value = s.status;
+  if (s.cover) {
+    const prev = document.getElementById("cover-preview");
+    prev.src = s.cover;
+    prev.style.display = "block";
+  }
+  document.getElementById("create-btn").textContent = "Save changes";
+  document.getElementById("cancel-edit-btn").style.display = "inline-block";
+  document.getElementById("chapter-section").style.display = "block";
+  document.getElementById("chapter-story-name").textContent = s.title;
+  await loadChapters(storyId);
+  window.scrollTo({ top: document.getElementById("story-form-title").offsetTop - 20, behavior: "smooth" });
+}
+
+function resetForm() {
+  editingStoryId = null;
+  coverData = null;
+  document.getElementById("story-form-title").textContent = "New story";
+  ["title", "description", "genres"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("status").value = "ongoing";
+  document.getElementById("cover-preview").style.display = "none";
+  document.getElementById("create-btn").textContent = "Create story";
+  document.getElementById("cancel-edit-btn").style.display = "none";
+  document.getElementById("chapter-section").style.display = "none";
+  document.getElementById("create-msg").textContent = "";
+}
+
+async function loadChapters(storyId) {
+  const { chapters } = await api(`/api/story?id=${storyId}`);
+  document.getElementById("chapter-list").innerHTML = chapters.length
+    ? chapters.map(c => `<button class="small secondary chap-edit-btn" data-num="${c.chapter_number}" style="margin:0 6px 6px 0;">Ch. ${c.chapter_number}</button>`).join("")
+    : `<p class="muted">No chapters yet — add the first one below.</p>`;
+  document.querySelectorAll(".chap-edit-btn").forEach(btn => {
+    btn.onclick = async () => {
+      const { chapter } = await api(`/api/chapter?story=${storyId}&num=${btn.dataset.num}`);
+      document.getElementById("chap-num").value = chapter.chapter_number;
+      document.getElementById("chap-title").value = chapter.title || "";
+      document.getElementById("chap-content").value = chapter.content;
+      document.getElementById("chap-msg").textContent = "Editing existing chapter — publishing will overwrite it.";
+      document.getElementById("chap-msg").className = "muted";
+    };
+  });
+}
+
+async function saveStory() {
+  const payload = {
+    title: document.getElementById("title").value,
+    description: document.getElementById("description").value,
+    genres: document.getElementById("genres").value,
+    status: document.getElementById("status").value,
+    cover: coverData
+  };
+  const msg = document.getElementById("create-msg");
+  try {
+    if (editingStoryId) {
+      await api("/api/story", { method: "PUT", body: JSON.stringify({ id: editingStoryId, ...payload }) });
+      msg.className = "success-msg";
+      msg.textContent = "Story updated!";
+    } else {
+      const res = await api("/api/stories", { method: "POST", body: JSON.stringify(payload) });
+      msg.className = "success-msg";
+      msg.textContent = res.approval_status === "approved"
+        ? "Story created and live!" : "Story created — waiting on admin approval.";
+      await loadMyStories();
+      startEditing(res.id);
+    }
+    await loadMyStories();
+  } catch (e) {
+    msg.className = "error-msg";
+    msg.textContent = e.message;
+  }
+}
+
+async function saveChapter() {
+  const msg = document.getElementById("chap-msg");
+  try {
+    await api("/api/chapter", { method: "POST", body: JSON.stringify({
+      story_id: editingStoryId,
+      chapter_number: Number(document.getElementById("chap-num").value),
+      title: document.getElementById("chap-title").value,
+      content: document.getElementById("chap-content").value
+    })});
+    msg.className = "success-msg";
+    msg.textContent = "Chapter published!";
+    ["chap-num", "chap-title", "chap-content"].forEach(id => document.getElementById(id).value = "");
+    await loadChapters(editingStoryId);
+  } catch (e) {
+    msg.className = "error-msg";
+    msg.textContent = e.message;
+  }
+}
+
 load();
 </script>
 </body>

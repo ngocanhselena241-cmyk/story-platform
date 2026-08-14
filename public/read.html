@@ -3,13 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reading</title>
+<title>Reading — Nayedaba</title>
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+<div id="chapter-progress"></div>
 <div id="nav"></div>
 <div class="container" style="padding-top:24px;">
   <div id="reader-settings" style="text-align:right;margin-bottom:10px;">
+    <span id="edit-chapter-slot"></span>
     <button class="secondary small" id="settings-toggle">Aa</button>
     <div id="settings-panel" style="display:none;text-align:left;max-width:260px;margin-left:auto;padding:12px;" class="card">
       <label>Font size</label>
@@ -32,7 +34,7 @@
     <div id="quote-msg" class="error-msg"></div>
   </div>
 
-  <div class="section-title">Comments</div>
+  <div class="section-title">Chapter comments</div>
   <div id="comment-form"></div>
   <div id="comments"></div>
 </div>
@@ -44,6 +46,7 @@ const storyId = params.get("story");
 const chapterNum = params.get("chapter");
 let currentUser = null;
 let chapterId = null;
+let allComments = [];
 
 function applyReaderSettings() {
   const fontSize = localStorage.getItem("reader-font-size") || "18";
@@ -53,7 +56,6 @@ function applyReaderSettings() {
   document.getElementById("font-size-slider").value = fontSize;
   document.getElementById("line-height-slider").value = lineHeight;
 }
-
 document.getElementById("settings-toggle").onclick = () => {
   const panel = document.getElementById("settings-panel");
   panel.style.display = panel.style.display === "none" ? "block" : "none";
@@ -68,20 +70,31 @@ document.getElementById("line-height-slider").oninput = (e) => {
 };
 applyReaderSettings();
 
+// Chapter progress bar based on scroll position
+window.addEventListener("scroll", () => {
+  const h = document.documentElement;
+  const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+  document.getElementById("chapter-progress").style.width = `${Math.min(100, Math.max(0, pct))}%`;
+});
+
 async function load() {
   currentUser = await renderNav();
   try {
     const { chapter, story, prev_chapter, next_chapter } = await api(`/api/chapter?story=${storyId}&num=${chapterNum}`);
     chapterId = chapter.id;
 
-    const paragraphs = chapter.content.split(/\n+/).filter(p => p.trim())
-      .map(p => `<p>${escapeHtml(p)}</p>`).join("");
+    const paragraphs = chapter.content.split(/\n+/).filter(p => p.trim());
+    const paraHtml = paragraphs.map((p, i) => `
+      <div class="para-wrap" data-para="${i}">
+        <p>${escapeHtml(p)}<button class="para-comment-btn" data-para="${i}" title="Comments on this paragraph">💬<span class="para-count" data-para="${i}"></span></button></p>
+        <div class="para-comment-panel" data-para="${i}" style="display:none;"></div>
+      </div>`).join("");
 
     document.getElementById("content").innerHTML = `
       <div class="reader-text">
         <p class="muted"><a href="/story.html?id=${storyId}">${escapeHtml(story.title)}</a></p>
         <h1>Chapter ${chapter.chapter_number}${chapter.title ? ": " + escapeHtml(chapter.title) : ""}</h1>
-        ${paragraphs}
+        ${paraHtml}
         <div class="chapter-nav">
           ${prev_chapter ? `<a class="btn secondary" href="/read.html?story=${storyId}&chapter=${prev_chapter}">← Chapter ${prev_chapter}</a>` : "<span></span>"}
           ${next_chapter ? `<a class="btn" href="/read.html?story=${storyId}&chapter=${next_chapter}">Chapter ${next_chapter} →</a>` : "<span></span>"}
@@ -89,9 +102,22 @@ async function load() {
       </div>
     `;
 
+    document.querySelectorAll(".para-comment-btn").forEach(btn => {
+      btn.onclick = () => toggleParaPanel(Number(btn.dataset.para));
+    });
+
     if (currentUser) {
       api("/api/progress", { method: "POST", body: JSON.stringify({ story_id: storyId, chapter_id: chapterId }) }).catch(() => {});
       loadMoodPicker();
+
+      // Edit button for the story's author
+      try {
+        const { stories } = await api("/api/my-stories");
+        if (stories.some(s => String(s.id) === String(storyId))) {
+          document.getElementById("edit-chapter-slot").innerHTML =
+            `<a class="btn secondary small" href="/upload.html?story=${storyId}">✏️ Edit</a> `;
+        }
+      } catch (e) {}
 
       document.getElementById("quote-section").style.display = "block";
       document.getElementById("quote-btn").onclick = async () => {
@@ -109,7 +135,7 @@ async function load() {
       };
 
       document.getElementById("comment-form").innerHTML = `
-        <textarea id="comment-input" rows="3" placeholder="Write a comment..."></textarea>
+        <textarea id="comment-input" rows="3" placeholder="Write a comment about the whole chapter..."></textarea>
         <button id="comment-btn" style="margin-top:8px;">Post comment</button>
         <div id="comment-msg" class="error-msg"></div>
       `;
@@ -141,7 +167,7 @@ async function loadMoodPicker() {
   const { mine } = await api(`/api/moods?chapter=${chapterId}`);
   const el = document.getElementById("mood-picker");
   el.innerHTML = MOODS.map(m =>
-    `<button class="mood-btn ${mine.includes(m) ? "active" : ""}" data-mood="${m}" style="font-size:1.3rem;margin-right:8px;${mine.includes(m) ? "background:var(--accent);" : "background:var(--bg-alt);"}">${m}</button>`
+    `<button class="mood-btn" data-mood="${m}" style="font-size:1.3rem;margin-right:8px;${mine.includes(m) ? "background:var(--accent);" : "background:var(--bg-alt);"}">${m}</button>`
   ).join("");
   el.querySelectorAll(".mood-btn").forEach(btn => {
     btn.onclick = async () => {
@@ -153,12 +179,61 @@ async function loadMoodPicker() {
 
 async function loadComments() {
   const { comments } = await api(`/api/comments?chapter=${chapterId}`);
-  document.getElementById("comments").innerHTML = comments.length
-    ? comments.map(c => `<div class="comment">
+  allComments = comments;
+
+  // General (whole-chapter) comments
+  const general = comments.filter(c => c.paragraph_index === null || c.paragraph_index === undefined);
+  document.getElementById("comments").innerHTML = general.length
+    ? general.map(c => `<div class="comment">
         <div class="who">${escapeHtml(c.username)} <span class="when">${timeAgo(c.created_at)}</span></div>
         <div>${escapeHtml(c.content)}</div>
       </div>`).join("")
     : `<p class="muted">No comments yet.</p>`;
+
+  // Per-paragraph counts
+  document.querySelectorAll(".para-count").forEach(span => {
+    const n = comments.filter(c => c.paragraph_index === Number(span.dataset.para)).length;
+    span.textContent = n ? n : "";
+  });
+}
+
+function toggleParaPanel(paraIndex) {
+  const panel = document.querySelector(`.para-comment-panel[data-para="${paraIndex}"]`);
+  if (panel.style.display !== "none") { panel.style.display = "none"; return; }
+
+  const paraComments = allComments.filter(c => c.paragraph_index === paraIndex);
+  let html = paraComments.length
+    ? paraComments.map(c => `<div class="comment">
+        <div class="who">${escapeHtml(c.username)} <span class="when">${timeAgo(c.created_at)}</span></div>
+        <div>${escapeHtml(c.content)}</div>
+      </div>`).join("")
+    : `<p class="muted">No comments on this paragraph yet.</p>`;
+
+  if (currentUser) {
+    html += `
+      <textarea class="para-input" data-para="${paraIndex}" rows="2" placeholder="Comment on this paragraph..." style="margin-top:8px;"></textarea>
+      <button class="small para-submit" data-para="${paraIndex}" style="margin-top:6px;">Post</button>`;
+  } else {
+    html += `<p class="muted"><a href="/login.html">Log in</a> to comment.</p>`;
+  }
+
+  panel.innerHTML = html;
+  panel.style.display = "block";
+
+  const submitBtn = panel.querySelector(".para-submit");
+  if (submitBtn) {
+    submitBtn.onclick = async () => {
+      const input = panel.querySelector(".para-input");
+      const content = input.value.trim();
+      if (!content) return;
+      await api("/api/comment", { method: "POST", body: JSON.stringify({
+        chapter_id: chapterId, content, paragraph_index: paraIndex
+      })});
+      await loadComments();
+      panel.style.display = "none";
+      toggleParaPanel(paraIndex);
+    };
+  }
 }
 
 load();

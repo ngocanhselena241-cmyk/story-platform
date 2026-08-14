@@ -11,8 +11,9 @@ export async function onRequestPost({ request, env }) {
   }
 
   const result = await env.DB.prepare(
-    "INSERT INTO comments (chapter_id, user_id, content, created_at) VALUES (?, ?, ?, ?)"
-  ).bind(body.chapter_id, user.id, body.content.trim(), Date.now()).run();
+    "INSERT INTO comments (chapter_id, user_id, content, paragraph_index, created_at) VALUES (?, ?, ?, ?, ?)"
+  ).bind(body.chapter_id, user.id, body.content.trim(),
+    Number.isInteger(body.paragraph_index) ? body.paragraph_index : null, Date.now()).run();
 
   return json({ id: result.meta.last_row_id });
 }

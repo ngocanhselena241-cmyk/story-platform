@@ -122,15 +122,38 @@ function renderCoverCard(s) {
   const coverEl = s.cover
     ? `<img src="${s.cover}" alt="">`
     : `<div class="cover-placeholder">${escapeHtml(s.title)}</div>`;
-  const tags = (s.genres || "").split(",").map(g => g.trim()).filter(Boolean)
+  const tags = (s.genres || "").split(",").map(g => g.trim()).filter(Boolean).slice(0, 5)
     .map(g => `<span class="tag">${escapeHtml(g)}</span>`).join(" ");
-  return `<a class="cover-card" href="/story.html?id=${s.id}">
-    ${coverEl}
-    <div class="cover-info">⭐ ${rating} · 👁 ${s.views}${s.latest_chapter ? ` · Ch. ${s.latest_chapter}` : ""}</div>
-    <div class="cover-hover">
-      <h4>${escapeHtml(s.title)}</h4>
+  return `<div class="cover-wrap">
+    <a class="cover-card" href="/story.html?id=${s.id}">
+      ${coverEl}
+      <div class="cover-info">
+        <div class="cover-title">${escapeHtml(s.title)}</div>
+        ⭐ ${rating} · 👁 ${s.views}${s.latest_chapter ? ` · Ch. ${s.latest_chapter}` : ""}
+      </div>
+    </a>
+    <div class="cover-side">
+      <div class="cover-side-title">${escapeHtml(s.title)}</div>
       <div>${tags}</div>
-      <div style="overflow:hidden;">${escapeHtml((s.description || "").slice(0, 220))}</div>
+      <div class="cover-side-desc">${escapeHtml((s.description || "").slice(0, 400))}</div>
     </div>
-  </a>`;
+  </div>`;
 }
+
+// Flip the side panel to the left for cards near the right edge
+document.addEventListener("mouseover", (e) => {
+  const wrap = e.target.closest && e.target.closest(".cover-wrap");
+  if (!wrap) return;
+  const rect = wrap.getBoundingClientRect();
+  wrap.classList.toggle("flip", rect.right + 245 > window.innerWidth);
+});
+
+// ---- Scroll to top/bottom buttons (all pages) ----
+(function initScrollButtons() {
+  const el = document.createElement("div");
+  el.id = "scroll-btns";
+  el.innerHTML = `<button id="scroll-top" title="Top of page">↑</button><button id="scroll-bottom" title="Bottom of page">↓</button>`;
+  document.body.appendChild(el);
+  el.querySelector("#scroll-top").onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
+  el.querySelector("#scroll-bottom").onclick = () => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+})();

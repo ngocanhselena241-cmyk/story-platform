@@ -26,10 +26,14 @@ async function load() {
     const genres = (story.genres || "").split(",").filter(Boolean).map(g => `<span class="tag">${escapeHtml(g.trim())}</span>`).join(" ");
     const rating = story.avg_rating ? Number(story.avg_rating).toFixed(1) : "Not yet rated";
 
+    const isAdmin = currentUser && currentUser.role === "admin";
     const chapterList = chapters.length
       ? chapters.map(c => `<div class="card" style="display:flex;justify-content:space-between;align-items:center;">
           <a href="/read.html?story=${storyId}&chapter=${c.chapter_number}">Chapter ${c.chapter_number}${c.title ? ": " + escapeHtml(c.title) : ""}</a>
-          <span class="muted" style="font-size:0.8rem;">${timeAgo(c.created_at)}</span>
+          <span>
+            <span class="muted" style="font-size:0.8rem;">${timeAgo(c.created_at)}</span>
+            ${isAdmin ? `<button class="small danger chap-del-btn" data-id="${c.id}" style="margin-left:8px;">🗑</button>` : ""}
+          </span>
         </div>`).join("")
       : `<p class="muted">No chapters yet.</p>`;
 
@@ -112,6 +116,23 @@ async function load() {
             `<a class="btn secondary small" href="/upload.html?story=${storyId}">✏️ Edit</a>`;
         }
       } catch (e) {}
+
+      if (currentUser.role === "admin") {
+        document.getElementById("edit-slot").innerHTML +=
+          ` <button class="danger small" id="admin-del-story">🗑 Delete story</button>`;
+        document.getElementById("admin-del-story").onclick = async () => {
+          if (!confirm("Permanently delete this story, all its chapters, and comments?")) return;
+          await api(`/api/admin/story?id=${storyId}`, { method: "DELETE" });
+          window.location.href = "/index.html";
+        };
+        document.querySelectorAll(".chap-del-btn").forEach(btn => {
+          btn.onclick = async () => {
+            if (!confirm("Delete this chapter and its comments?")) return;
+            await api(`/api/admin/chapter?id=${btn.dataset.id}`, { method: "DELETE" });
+            location.reload();
+          };
+        });
+      }
     }
   } catch (e) {
     document.getElementById("content").innerHTML = `<p class="error-msg">Couldn't load this story.</p>`;

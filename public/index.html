@@ -66,17 +66,17 @@ async function load() {
     try {
       const { continue_reading } = await api("/api/library");
       if (continue_reading.length) {
-        const html = continue_reading.map(c => {
-          const pct = Math.round((c.chapter_number / c.total_chapters) * 100);
-          return `<div class="card">
-            <a href="/story.html?id=${c.story_id}"><h3>${escapeHtml(c.title)}</h3></a>
-            <div class="story-meta">Chapter ${c.chapter_number} / ${c.total_chapters}</div>
-            <div class="progress-bar"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
-            <a class="btn small" href="/read.html?story=${c.story_id}&chapter=${c.chapter_number}">Continue reading →</a>
+        const c = continue_reading[0];
+        const pct = Math.round((c.chapter_number / c.total_chapters) * 100);
+        document.getElementById("continue-section").innerHTML = `
+          <div class="continue-compact">
+            <div class="cc-info">
+              <div class="cc-title">${escapeHtml(c.title)}</div>
+              <div class="story-meta">Ch. ${c.chapter_number}/${c.total_chapters} · ${pct}%</div>
+              <div class="progress-bar" style="max-width:200px;"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+            </div>
+            <a class="btn small" href="/read.html?story=${c.story_id}&chapter=${c.chapter_number}">Continue →</a>
           </div>`;
-        }).join("");
-        document.getElementById("continue-section").innerHTML =
-          `<div class="section-title">Continue Reading</div>${html}`;
       }
     } catch (e) {}
 

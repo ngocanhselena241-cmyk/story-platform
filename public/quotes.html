@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Quotes</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="container" style="padding-top:24px;max-width:600px;">
+  <div id="content"><p class="muted">Loading...</p></div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+async function load() {
+  const user = await renderNav();
+  const content = document.getElementById("content");
+  if (!user) { content.innerHTML = `<p>You need to <a href="/login.html">log in</a> to see your quotes.</p>`; return; }
+
+  try {
+    const { quotes } = await api("/api/quote");
+    content.innerHTML = `<h1>My Quotes</h1>` + (quotes.length
+      ? quotes.map(q => `
+        <div class="card">
+          <div style="font-style:italic;">"${escapeHtml(q.quote_text)}"</div>
+          <div class="story-meta" style="margin-top:8px;">
+            — <a href="/story.html?id=${q.story_id}">${escapeHtml(q.story_title)}</a>, Chapter ${q.chapter_number}
+          </div>
+        </div>`).join("")
+      : `<p class="muted">No saved quotes yet — while reading, paste a line you love into the "Save a quote" box.</p>`);
+  } catch (e) {
+    content.innerHTML = `<p class="error-msg">Couldn't load your quotes.</p>`;
+  }
+}
+load();
+</script>
+</body>
+</html>

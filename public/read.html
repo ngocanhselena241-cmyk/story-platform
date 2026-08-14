@@ -10,6 +10,19 @@
 <div id="nav"></div>
 <div class="container" style="padding-top:24px;">
   <div id="content"><p class="muted">Loading...</p></div>
+
+  <div id="mood-section" style="display:none;">
+    <div class="section-title">How did this chapter feel?</div>
+    <div id="mood-picker"></div>
+  </div>
+
+  <div id="quote-section" style="display:none;margin-top:24px;">
+    <div class="section-title">Save a quote from this chapter</div>
+    <textarea id="quote-input" rows="2" placeholder="Paste or type a line you loved..."></textarea>
+    <button id="quote-btn" style="margin-top:8px;">Save quote</button>
+    <div id="quote-msg" class="error-msg"></div>
+  </div>
+
   <div class="section-title">Comments</div>
   <div id="comment-form"></div>
   <div id="comments"></div>
@@ -46,6 +59,23 @@ async function load() {
 
     if (currentUser) {
       api("/api/progress", { method: "POST", body: JSON.stringify({ story_id: storyId, chapter_id: chapterId }) }).catch(() => {});
+      loadMoodPicker();
+
+      document.getElementById("quote-section").style.display = "block";
+      document.getElementById("quote-btn").onclick = async () => {
+        const text = document.getElementById("quote-input").value.trim();
+        if (!text) return;
+        try {
+          await api("/api/quote", { method: "POST", body: JSON.stringify({ chapter_id: chapterId, quote_text: text }) });
+          document.getElementById("quote-msg").className = "success-msg";
+          document.getElementById("quote-msg").textContent = "Saved to My Quotes!";
+          document.getElementById("quote-input").value = "";
+        } catch (e) {
+          document.getElementById("quote-msg").className = "error-msg";
+          document.getElementById("quote-msg").textContent = e.message;
+        }
+      };
+
       document.getElementById("comment-form").innerHTML = `
         <textarea id="comment-input" rows="3" placeholder="Write a comment..."></textarea>
         <button id="comment-btn" style="margin-top:8px;">Post comment</button>
@@ -70,6 +100,23 @@ async function load() {
   } catch (e) {
     document.getElementById("content").innerHTML = `<p class="error-msg">Couldn't load this chapter.</p>`;
   }
+}
+
+const MOODS = ["😭", "❤️", "🔥", "😂", "😱", "💀", "⚡"];
+
+async function loadMoodPicker() {
+  document.getElementById("mood-section").style.display = "block";
+  const { mine } = await api(`/api/moods?chapter=${chapterId}`);
+  const el = document.getElementById("mood-picker");
+  el.innerHTML = MOODS.map(m =>
+    `<button class="mood-btn ${mine.includes(m) ? "active" : ""}" data-mood="${m}" style="font-size:1.3rem;margin-right:8px;${mine.includes(m) ? "background:var(--accent);" : "background:var(--bg-alt);"}">${m}</button>`
+  ).join("");
+  el.querySelectorAll(".mood-btn").forEach(btn => {
+    btn.onclick = async () => {
+      const { active } = await api("/api/mood", { method: "POST", body: JSON.stringify({ chapter_id: chapterId, mood: btn.dataset.mood }) });
+      btn.style.background = active ? "var(--accent)" : "var(--bg-alt)";
+    };
+  });
 }
 
 async function loadComments() {

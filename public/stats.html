@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Stats</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="container" style="padding-top:24px;max-width:500px;">
+  <div id="content"><p class="muted">Loading...</p></div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+async function load() {
+  const user = await renderNav();
+  const content = document.getElementById("content");
+  if (!user) { content.innerHTML = `<p>You need to <a href="/login.html">log in</a> to see your stats.</p>`; return; }
+
+  try {
+    const stats = await api("/api/stats");
+    content.innerHTML = `
+      <h1>My Reading Stats</h1>
+      <div class="card">
+        <div style="font-size:2rem;">🔥 ${stats.streak}</div>
+        <div class="muted">day reading streak</div>
+      </div>
+      <div class="card">
+        <div style="font-size:2rem;">${stats.chapters_read}</div>
+        <div class="muted">chapters read</div>
+      </div>
+      <div class="card">
+        <div style="font-size:2rem;">${stats.stories_read}</div>
+        <div class="muted">stories started</div>
+      </div>
+    `;
+  } catch (e) {
+    content.innerHTML = `<p class="error-msg">Couldn't load your stats.</p>`;
+  }
+}
+load();
+</script>
+</body>
+</html>

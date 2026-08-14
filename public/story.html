@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="container" style="padding-top:24px;">
+  <a href="/index.html" class="muted">← Back to all stories</a>
+  <div id="content"><p class="muted">Loading...</p></div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const storyId = params.get("id");
+let currentUser = null;
+
+async function load() {
+  currentUser = await renderNav();
+  try {
+    const { story, chapters } = await api(`/api/story?id=${storyId}`);
+    const genres = (story.genres || "").split(",").filter(Boolean).map(g => `<span class="tag">${escapeHtml(g.trim())}</span>`).join(" ");
+    const rating = story.avg_rating ? Number(story.avg_rating).toFixed(1) : "Not yet rated";
+
+    const chapterList = chapters.length
+      ? chapters.map(c => `<div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+          <a href="/read.html?story=${storyId}&chapter=${c.chapter_number}">Chapter ${c.chapter_number}${c.title ? ": " + escapeHtml(c.title) : ""}</a>
+          <span class="muted" style="font-size:0.8rem;">${timeAgo(c.created_at)}</span>
+        </div>`).join("")
+      : `<p class="muted">No chapters yet.</p>`;
+
+    document.getElementById("content").innerHTML = `
+      <h1>${escapeHtml(story.title)}</h1>
+      <div class="story-meta">by ${escapeHtml(story.author_name)} · ${story.status} · ⭐ ${rating} (${story.rating_count} ratings) · 👁 ${story.views}</div>
+      <div style="margin:10px 0;">${genres}</div>
+      <p>${escapeHtml(story.description)}</p>
+      ${chapters.length ? `<a class="btn" href="/read.html?story=${storyId}&chapter=${chapters[0].chapter_number}">Start Reading</a>` : ""}
+      ${currentUser ? `<div id="rate-box" style="margin-top:16px;">
+        <label>Rate this story (1-10)</label>
+        <input type="number" id="rate-input" min="1" max="10" style="max-width:100px;display:inline-block;">
+        <button id="rate-btn" class="small">Submit</button>
+        <span id="rate-msg"></span>
+      </div>` : ""}
+      <div class="section-title">Chapters</div>
+      ${chapterList}
+    `;
+
+    const rateBtn = document.getElementById("rate-btn");
+    if (rateBtn) {
+      rateBtn.onclick = async () => {
+        try {
+          await api("/api/rating", { method: "POST", body: JSON.stringify({
+            story_id: storyId, rating: Number(document.getElementById("rate-input").value)
+          })});
+          document.getElementById("rate-msg").textContent = "Thanks for rating!";
+        } catch (e) {
+          document.getElementById("rate-msg").textContent = e.message;
+        }
+      };
+    }
+  } catch (e) {
+    document.getElementById("content").innerHTML = `<p class="error-msg">Couldn't load this story.</p>`;
+  }
+}
+load();
+</script>
+</body>
+</html>

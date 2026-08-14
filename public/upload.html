@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upload</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="container" style="padding-top:24px;max-width:600px;">
+  <div id="gate"><p class="muted">Loading...</p></div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+async function load() {
+  const user = await renderNav();
+  const gate = document.getElementById("gate");
+  if (!user) { gate.innerHTML = `<p>You need to <a href="/login.html">log in</a> first.</p>`; return; }
+  if (user.role !== "uploader" && user.role !== "admin") {
+    gate.innerHTML = `<p>Your account isn't an uploader yet. Ask an admin to upgrade your role (Admin panel → set role).</p>`;
+    return;
+  }
+
+  gate.innerHTML = `
+    <h1>Post a new story</h1>
+    <label>Title</label>
+    <input id="title">
+    <label>Description</label>
+    <textarea id="description" rows="3"></textarea>
+    <label>Genres (comma-separated)</label>
+    <input id="genres" placeholder="Fantasy, Yuri, Slow Burn">
+    <label>Status</label>
+    <select id="status">
+      <option value="ongoing">Ongoing</option>
+      <option value="completed">Completed</option>
+      <option value="hiatus">Hiatus</option>
+    </select>
+    <button id="create-btn" style="margin-top:16px;">Create story</button>
+    <div id="create-msg" class="error-msg"></div>
+
+    <div id="chapter-section" style="display:none;margin-top:40px;">
+      <div class="section-title">Add a chapter</div>
+      <label>Chapter number</label>
+      <input id="chap-num" type="number" min="1">
+      <label>Chapter title (optional)</label>
+      <input id="chap-title">
+      <label>Content (each line becomes a paragraph)</label>
+      <textarea id="chap-content" rows="12"></textarea>
+      <button id="chap-btn" style="margin-top:16px;">Publish chapter</button>
+      <div id="chap-msg" class="error-msg"></div>
+    </div>
+  `;
+
+  let storyId = null;
+
+  document.getElementById("create-btn").onclick = async () => {
+    try {
+      const res = await api("/api/stories", { method: "POST", body: JSON.stringify({
+        title: document.getElementById("title").value,
+        description: document.getElementById("description").value,
+        genres: document.getElementById("genres").value,
+        status: document.getElementById("status").value
+      })});
+      storyId = res.id;
+      document.getElementById("create-msg").className = "success-msg";
+      document.getElementById("create-msg").textContent = res.approval_status === "approved"
+        ? "Story created and live!" : "Story created — waiting on admin approval before it appears publicly.";
+      document.getElementById("chapter-section").style.display = "block";
+    } catch (e) {
+      document.getElementById("create-msg").className = "error-msg";
+      document.getElementById("create-msg").textContent = e.message;
+    }
+  };
+
+  document.getElementById("chap-btn").onclick = async () => {
+    try {
+      await api("/api/chapter", { method: "POST", body: JSON.stringify({
+        story_id: storyId,
+        chapter_number: Number(document.getElementById("chap-num").value),
+        title: document.getElementById("chap-title").value,
+        content: document.getElementById("chap-content").value
+      })});
+      document.getElementById("chap-msg").className = "success-msg";
+      document.getElementById("chap-msg").textContent = "Chapter published!";
+      document.getElementById("chap-num").value = "";
+      document.getElementById("chap-title").value = "";
+      document.getElementById("chap-content").value = "";
+    } catch (e) {
+      document.getElementById("chap-msg").className = "error-msg";
+      document.getElementById("chap-msg").textContent = e.message;
+    }
+  };
+}
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reading</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="container" style="padding-top:24px;">
+  <div id="content"><p class="muted">Loading...</p></div>
+  <div class="section-title">Comments</div>
+  <div id="comment-form"></div>
+  <div id="comments"></div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const storyId = params.get("story");
+const chapterNum = params.get("chapter");
+let currentUser = null;
+let chapterId = null;
+
+async function load() {
+  currentUser = await renderNav();
+  try {
+    const { chapter, story, prev_chapter, next_chapter } = await api(`/api/chapter?story=${storyId}&num=${chapterNum}`);
+    chapterId = chapter.id;
+
+    const paragraphs = chapter.content.split(/\n+/).filter(p => p.trim())
+      .map(p => `<p>${escapeHtml(p)}</p>`).join("");
+
+    document.getElementById("content").innerHTML = `
+      <div class="reader-text">
+        <p class="muted"><a href="/story.html?id=${storyId}">${escapeHtml(story.title)}</a></p>
+        <h1>Chapter ${chapter.chapter_number}${chapter.title ? ": " + escapeHtml(chapter.title) : ""}</h1>
+        ${paragraphs}
+        <div class="chapter-nav">
+          ${prev_chapter ? `<a class="btn secondary" href="/read.html?story=${storyId}&chapter=${prev_chapter}">← Chapter ${prev_chapter}</a>` : "<span></span>"}
+          ${next_chapter ? `<a class="btn" href="/read.html?story=${storyId}&chapter=${next_chapter}">Chapter ${next_chapter} →</a>` : "<span></span>"}
+        </div>
+      </div>
+    `;
+
+    if (currentUser) {
+      api("/api/progress", { method: "POST", body: JSON.stringify({ story_id: storyId, chapter_id: chapterId }) }).catch(() => {});
+      document.getElementById("comment-form").innerHTML = `
+        <textarea id="comment-input" rows="3" placeholder="Write a comment..."></textarea>
+        <button id="comment-btn" style="margin-top:8px;">Post comment</button>
+        <div id="comment-msg" class="error-msg"></div>
+      `;
+      document.getElementById("comment-btn").onclick = async () => {
+        const content = document.getElementById("comment-input").value.trim();
+        if (!content) return;
+        try {
+          await api("/api/comment", { method: "POST", body: JSON.stringify({ chapter_id: chapterId, content }) });
+          document.getElementById("comment-input").value = "";
+          loadComments();
+        } catch (e) {
+          document.getElementById("comment-msg").textContent = e.message;
+        }
+      };
+    } else {
+      document.getElementById("comment-form").innerHTML = `<p class="muted"><a href="/login.html">Log in</a> to leave a comment.</p>`;
+    }
+
+    loadComments();
+  } catch (e) {
+    document.getElementById("content").innerHTML = `<p class="error-msg">Couldn't load this chapter.</p>`;
+  }
+}
+
+async function loadComments() {
+  const { comments } = await api(`/api/comments?chapter=${chapterId}`);
+  document.getElementById("comments").innerHTML = comments.length
+    ? comments.map(c => `<div class="comment">
+        <div class="who">${escapeHtml(c.username)} <span class="when">${timeAgo(c.created_at)}</span></div>
+        <div>${escapeHtml(c.content)}</div>
+      </div>`).join("")
+    : `<p class="muted">No comments yet.</p>`;
+}
+
+load();
+</script>
+</body>
+</html>

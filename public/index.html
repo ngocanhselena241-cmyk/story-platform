@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Stories</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="container" style="padding-top:24px;">
+
+  <div style="margin-bottom:20px;">
+    <input id="search" placeholder="🔍 Search stories by title...">
+  </div>
+
+  <div id="continue-section"></div>
+
+  <div class="section-title">✨ Recently Updated</div>
+  <div id="story-list"><p class="muted">Loading...</p></div>
+
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+async function load() {
+  const user = await renderNav();
+
+  if (user) {
+    try {
+      const { continue_reading } = await api("/api/library");
+      if (continue_reading.length) {
+        const html = continue_reading.map(c => {
+          const pct = Math.round((c.chapter_number / c.total_chapters) * 100);
+          return `<div class="card">
+            <a href="/story.html?id=${c.story_id}"><h3>${escapeHtml(c.title)}</h3></a>
+            <div class="story-meta">Chapter ${c.chapter_number} / ${c.total_chapters}</div>
+            <div class="progress-bar"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+            <a class="btn small" href="/read.html?story=${c.story_id}&chapter=${c.chapter_number}">Continue reading →</a>
+          </div>`;
+        }).join("");
+        document.getElementById("continue-section").innerHTML =
+          `<div class="section-title">Continue Reading</div>${html}`;
+      }
+    } catch (e) {}
+  }
+
+  try {
+    const { stories } = await api("/api/stories?sort=updated");
+    document.getElementById("story-list").innerHTML = stories.length
+      ? stories.map(renderStoryCard).join("")
+      : `<p class="muted">No stories yet — be the first to post one!</p>`;
+  } catch (e) {
+    document.getElementById("story-list").innerHTML = `<p class="error-msg">Couldn't load stories.</p>`;
+  }
+}
+
+function renderStoryCard(s) {
+  const rating = s.avg_rating ? Number(s.avg_rating).toFixed(1) : "—";
+  const genres = (s.genres || "").split(",").filter(Boolean).map(g => `<span class="tag">${escapeHtml(g.trim())}</span>`).join(" ");
+  return `<div class="card story-card">
+    <a href="/story.html?id=${s.id}"><h3>${escapeHtml(s.title)}</h3></a>
+    <div class="story-meta">⭐ ${rating} · 👁 ${s.views} · Ch. ${s.chapter_count} · by ${escapeHtml(s.author_name)} · updated ${timeAgo(s.updated_at)}</div>
+    <div>${genres}</div>
+  </div>`;
+}
+
+document.getElementById("search").addEventListener("keydown", async (e) => {
+  if (e.key !== "Enter") return;
+  const q = e.target.value.trim();
+  const { stories } = await api(`/api/stories?q=${encodeURIComponent(q)}`);
+  document.getElementById("story-list").innerHTML = stories.length
+    ? stories.map(renderStoryCard).join("")
+    : `<p class="muted">No stories matched your search.</p>`;
+});
+
+load();
+</script>
+</body>
+</html>

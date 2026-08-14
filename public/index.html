@@ -10,8 +10,20 @@
 <div id="nav"></div>
 <div class="container" style="padding-top:24px;">
 
-  <div style="margin-bottom:20px;">
-    <input id="search" placeholder="🔍 Search stories by title...">
+  <div style="margin-bottom:20px;display:flex;gap:10px;">
+    <input id="search" placeholder="🔍 Search stories by title..." style="flex:1;">
+    <select id="sort-select" style="max-width:160px;">
+      <option value="updated">Recently Updated</option>
+      <option value="popular">Most Popular</option>
+      <option value="rating">Highest Rated</option>
+      <option value="new">Newest</option>
+    </select>
+    <select id="status-select" style="max-width:140px;">
+      <option value="">All Status</option>
+      <option value="ongoing">Ongoing</option>
+      <option value="completed">Completed</option>
+      <option value="hiatus">Hiatus</option>
+    </select>
   </div>
 
   <div class="section-title">Browse by Mood</div>
@@ -88,13 +100,23 @@ async function load() {
   }
 
   try {
-    const { stories } = await api("/api/stories?sort=updated");
-    document.getElementById("story-list").innerHTML = stories.length
-      ? stories.map(renderStoryCard).join("")
-      : `<p class="muted">No stories yet — be the first to post one!</p>`;
+    await loadStoryList();
   } catch (e) {
     document.getElementById("story-list").innerHTML = `<p class="error-msg">Couldn't load stories.</p>`;
   }
+}
+
+async function loadStoryList() {
+  const sort = document.getElementById("sort-select").value;
+  const status = document.getElementById("status-select").value;
+  const q = document.getElementById("search").value.trim();
+  let url = `/api/stories?sort=${sort}`;
+  if (status) url += `&status=${status}`;
+  if (q) url += `&q=${encodeURIComponent(q)}`;
+  const { stories } = await api(url);
+  document.getElementById("story-list").innerHTML = stories.length
+    ? stories.map(renderStoryCard).join("")
+    : `<p class="muted">No stories matched.</p>`;
 }
 
 function renderStoryCard(s) {
@@ -107,14 +129,12 @@ function renderStoryCard(s) {
   </div>`;
 }
 
-document.getElementById("search").addEventListener("keydown", async (e) => {
+document.getElementById("search").addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
-  const q = e.target.value.trim();
-  const { stories } = await api(`/api/stories?q=${encodeURIComponent(q)}`);
-  document.getElementById("story-list").innerHTML = stories.length
-    ? stories.map(renderStoryCard).join("")
-    : `<p class="muted">No stories matched your search.</p>`;
+  loadStoryList();
 });
+document.getElementById("sort-select").addEventListener("change", loadStoryList);
+document.getElementById("status-select").addEventListener("change", loadStoryList);
 
 load();
 </script>

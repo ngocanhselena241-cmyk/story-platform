@@ -39,6 +39,18 @@ async function load() {
       <div style="margin:10px 0;">${genres}</div>
       <p>${escapeHtml(story.description)}</p>
       ${chapters.length ? `<a class="btn" href="/read.html?story=${storyId}&chapter=${chapters[0].chapter_number}">Start Reading</a>` : ""}
+      ${currentUser ? `<div id="library-box" style="margin-top:16px;">
+        <label>Add to your library</label>
+        <select id="library-status">
+          <option value="">— Choose —</option>
+          <option value="reading">Reading</option>
+          <option value="plan_to_read">Plan to Read</option>
+          <option value="completed">Completed</option>
+          <option value="on_hold">On Hold</option>
+          <option value="dropped">Dropped</option>
+          <option value="favourite">Favourite</option>
+        </select>
+      </div>` : ""}
       ${currentUser ? `<div id="rate-box" style="margin-top:16px;">
         <label>Rate this story (1-10)</label>
         <input type="number" id="rate-input" min="1" max="10" style="max-width:100px;display:inline-block;">
@@ -71,6 +83,19 @@ async function load() {
         } catch (e) {
           document.getElementById("rate-msg").textContent = e.message;
         }
+      };
+    }
+
+    const libSelect = document.getElementById("library-status");
+    if (libSelect) {
+      try {
+        const { library } = await api("/api/library");
+        const mine = library.find(l => String(l.story_id) === String(storyId));
+        if (mine) libSelect.value = mine.status;
+      } catch (e) {}
+      libSelect.onchange = async () => {
+        if (!libSelect.value) return;
+        await api("/api/library", { method: "POST", body: JSON.stringify({ story_id: storyId, status: libSelect.value }) });
       };
     }
   } catch (e) {

@@ -98,7 +98,7 @@ label { display: block; margin: 14px 0 6px; font-size: 0.9rem; color: var(--text
 .progress-bar { background: var(--border); border-radius: 6px; height: 8px; overflow: hidden; margin: 6px 0; }
 .progress-bar-fill { background: var(--accent); height: 100%; }
 
-.reader-text { font-size: 1.1rem; max-width: 680px; margin: 0 auto; }
+.reader-text { font-size: var(--reader-font-size, 1.1rem); line-height: var(--reader-line-height, 1.6); max-width: 680px; margin: 0 auto; }
 .reader-text p { margin-bottom: 1.2em; }
 .chapter-nav { display: flex; justify-content: space-between; margin: 34px 0; }
 

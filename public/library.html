@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Library</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="container" style="padding-top:24px;">
+  <div id="content"><p class="muted">Loading...</p></div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const STATUS_LABELS = {
+  reading: "📖 Reading",
+  plan_to_read: "📋 Plan to Read",
+  completed: "✅ Completed",
+  on_hold: "⏸ On Hold",
+  dropped: "🗑 Dropped",
+  favourite: "⭐ Favourite"
+};
+
+async function load() {
+  const user = await renderNav();
+  const content = document.getElementById("content");
+  if (!user) { content.innerHTML = `<p>You need to <a href="/login.html">log in</a> to see your library.</p>`; return; }
+
+  try {
+    const { library } = await api("/api/library");
+    if (!library.length) {
+      content.innerHTML = `<h1>My Library</h1><p class="muted">Nothing here yet — add stories from their story page.</p>`;
+      return;
+    }
+    const groups = {};
+    library.forEach(item => {
+      groups[item.status] = groups[item.status] || [];
+      groups[item.status].push(item);
+    });
+
+    let html = `<h1>My Library</h1>`;
+    Object.keys(STATUS_LABELS).forEach(status => {
+      if (!groups[status]) return;
+      html += `<div class="section-title">${STATUS_LABELS[status]}</div>`;
+      html += groups[status].map(item =>
+        `<div class="card"><a href="/story.html?id=${item.story_id}">${escapeHtml(item.title)}</a></div>`
+      ).join("");
+    });
+    content.innerHTML = html;
+  } catch (e) {
+    content.innerHTML = `<p class="error-msg">Couldn't load your library.</p>`;
+  }
+}
+load();
+</script>
+</body>
+</html>

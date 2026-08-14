@@ -7,6 +7,7 @@ export async function onRequestGet({ request, env }) {
   const genre = url.searchParams.get("genre");
   const q = url.searchParams.get("q");
   const mood = url.searchParams.get("mood");
+  const status = url.searchParams.get("status");
 
   let sql = `
     SELECT s.id, s.title, s.description, s.genres, s.status, s.views, s.updated_at,
@@ -20,6 +21,7 @@ export async function onRequestGet({ request, env }) {
   const params = [];
   if (genre) { sql += " AND s.genres LIKE ?"; params.push(`%${genre}%`); }
   if (q) { sql += " AND s.title LIKE ?"; params.push(`%${q}%`); }
+  if (status) { sql += " AND s.status = ?"; params.push(status); }
   if (mood) {
     sql += ` AND s.id IN (
       SELECT c.story_id FROM chapters c JOIN chapter_moods cm ON cm.chapter_id = c.id WHERE cm.mood = ?
@@ -29,6 +31,7 @@ export async function onRequestGet({ request, env }) {
 
   if (sort === "rating") sql += " ORDER BY avg_rating DESC";
   else if (sort === "new") sql += " ORDER BY s.created_at DESC";
+  else if (sort === "popular") sql += " ORDER BY s.views DESC";
   else sql += " ORDER BY s.updated_at DESC";
   sql += " LIMIT 50";
 

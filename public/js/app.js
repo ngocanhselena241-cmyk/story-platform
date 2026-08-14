@@ -34,6 +34,7 @@ async function renderNav() {
   if (user) {
     if (user.role === "uploader" || user.role === "admin") links.push(`<a href="/upload.html">Upload</a>`);
     if (user.role === "admin") links.push(`<a href="/admin.html">Admin</a>`);
+    links.push(`<a href="/library.html">Library</a>`);
     links.push(`<a href="/quotes.html">My Quotes</a>`);
     links.push(`<a href="/stats.html">Stats</a>`);
     links.push(`<span class="muted">Hi, ${escapeHtml(user.username)}</span>`);

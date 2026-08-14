@@ -9,6 +9,15 @@
 <body>
 <div id="nav"></div>
 <div class="container" style="padding-top:24px;">
+  <div id="reader-settings" style="text-align:right;margin-bottom:10px;">
+    <button class="secondary small" id="settings-toggle">Aa</button>
+    <div id="settings-panel" style="display:none;text-align:left;max-width:260px;margin-left:auto;padding:12px;" class="card">
+      <label>Font size</label>
+      <input type="range" id="font-size-slider" min="14" max="26" value="18">
+      <label>Line spacing</label>
+      <input type="range" id="line-height-slider" min="12" max="24" value="16">
+    </div>
+  </div>
   <div id="content"><p class="muted">Loading...</p></div>
 
   <div id="mood-section" style="display:none;">
@@ -35,6 +44,29 @@ const storyId = params.get("story");
 const chapterNum = params.get("chapter");
 let currentUser = null;
 let chapterId = null;
+
+function applyReaderSettings() {
+  const fontSize = localStorage.getItem("reader-font-size") || "18";
+  const lineHeight = localStorage.getItem("reader-line-height") || "16";
+  document.documentElement.style.setProperty("--reader-font-size", fontSize + "px");
+  document.documentElement.style.setProperty("--reader-line-height", (lineHeight / 10));
+  document.getElementById("font-size-slider").value = fontSize;
+  document.getElementById("line-height-slider").value = lineHeight;
+}
+
+document.getElementById("settings-toggle").onclick = () => {
+  const panel = document.getElementById("settings-panel");
+  panel.style.display = panel.style.display === "none" ? "block" : "none";
+};
+document.getElementById("font-size-slider").oninput = (e) => {
+  localStorage.setItem("reader-font-size", e.target.value);
+  document.documentElement.style.setProperty("--reader-font-size", e.target.value + "px");
+};
+document.getElementById("line-height-slider").oninput = (e) => {
+  localStorage.setItem("reader-line-height", e.target.value);
+  document.documentElement.style.setProperty("--reader-line-height", (e.target.value / 10));
+};
+applyReaderSettings();
 
 async function load() {
   currentUser = await renderNav();

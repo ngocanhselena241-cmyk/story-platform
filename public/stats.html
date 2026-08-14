@@ -35,6 +35,15 @@ async function load() {
         <div style="font-size:2rem;">${stats.stories_read}</div>
         <div class="muted">stories started</div>
       </div>
+
+      <div class="section-title">Achievements</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;">
+        ${stats.achievements.map(a => `
+          <div class="card" style="text-align:center;width:110px;opacity:${a.earned ? "1" : "0.35"};">
+            <div style="font-size:1.8rem;">${a.icon}</div>
+            <div class="muted" style="font-size:0.75rem;">${a.label}</div>
+          </div>`).join("")}
+      </div>
     `;
   } catch (e) {
     content.innerHTML = `<p class="error-msg">Couldn't load your stats.</p>`;

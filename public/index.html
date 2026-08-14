@@ -14,7 +14,12 @@
     <input id="search" placeholder="🔍 Search stories by title...">
   </div>
 
+  <div class="section-title">Browse by Mood</div>
+  <div id="mood-browse" style="margin-bottom:10px;"></div>
+
   <div id="continue-section"></div>
+  <div id="recommend-section"></div>
+  <div id="gems-section"></div>
 
   <div class="section-title">✨ Recently Updated</div>
   <div id="story-list"><p class="muted">Loading...</p></div>
@@ -25,6 +30,31 @@
 <script>
 async function load() {
   const user = await renderNav();
+
+  const MOODS = ["😭", "❤️", "🔥", "😂", "😱", "💀", "⚡"];
+  document.getElementById("mood-browse").innerHTML = MOODS.map(m =>
+    `<button class="mood-filter-btn secondary" data-mood="${m}" style="font-size:1.2rem;margin-right:8px;">${m}</button>`
+  ).join("");
+  document.querySelectorAll(".mood-filter-btn").forEach(btn => {
+    btn.onclick = async () => {
+      const { stories } = await api(`/api/stories?mood=${encodeURIComponent(btn.dataset.mood)}`);
+      document.getElementById("story-list").innerHTML = stories.length
+        ? stories.map(renderStoryCard).join("")
+        : `<p class="muted">No stories tagged with this mood yet.</p>`;
+    };
+  });
+
+  try {
+    const { stories } = await api("/api/hidden-gems");
+    if (stories.length) {
+      document.getElementById("gems-section").innerHTML =
+        `<div class="section-title">💎 Hidden Gems</div>` +
+        stories.map(s => `<div class="card story-card">
+          <a href="/story.html?id=${s.id}"><h3>${escapeHtml(s.title)}</h3></a>
+          <div class="story-meta">⭐ ${Number(s.avg_rating).toFixed(1)} · 👁 ${s.views}</div>
+        </div>`).join("");
+    }
+  } catch (e) {}
 
   if (user) {
     try {
@@ -41,6 +71,18 @@ async function load() {
         }).join("");
         document.getElementById("continue-section").innerHTML =
           `<div class="section-title">Continue Reading</div>${html}`;
+      }
+    } catch (e) {}
+
+    try {
+      const { stories, based_on } = await api("/api/recommendations");
+      if (stories.length) {
+        document.getElementById("recommend-section").innerHTML =
+          `<div class="section-title">🪄 Because you liked ${escapeHtml(based_on)}</div>` +
+          stories.map(s => `<div class="card story-card">
+            <a href="/story.html?id=${s.id}"><h3>${escapeHtml(s.title)}</h3></a>
+            <div class="story-meta">⭐ ${s.avg_rating ? Number(s.avg_rating).toFixed(1) : "—"} · 👁 ${s.views}</div>
+          </div>`).join("");
       }
     } catch (e) {}
   }

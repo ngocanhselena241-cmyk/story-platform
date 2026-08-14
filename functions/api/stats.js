@@ -35,9 +35,19 @@ export async function onRequestGet({ request, env }) {
     }
   }
 
+  const achievements = [
+    { icon: "📚", label: "First Chapter", earned: chaptersRow.n >= 1 },
+    { icon: "📖", label: "10 Chapters Read", earned: chaptersRow.n >= 10 },
+    { icon: "🏆", label: "50 Chapters Read", earned: chaptersRow.n >= 50 },
+    { icon: "🌱", label: "3-Day Streak", earned: streak >= 3 },
+    { icon: "🔥", label: "7-Day Streak", earned: streak >= 7 },
+    { icon: "🌟", label: "5 Stories Started", earned: storiesRow.n >= 5 }
+  ];
+
   return json({
     chapters_read: chaptersRow.n,
     stories_read: storiesRow.n,
-    streak
+    streak,
+    achievements
   });
 }

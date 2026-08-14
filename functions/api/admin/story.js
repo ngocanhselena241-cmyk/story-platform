@@ -26,10 +26,13 @@ export async function onRequestDelete({ request, env }) {
   if (!id) return badRequest("Missing story id.");
 
   await env.DB.prepare("DELETE FROM comments WHERE chapter_id IN (SELECT id FROM chapters WHERE story_id = ?)").bind(id).run();
-  await env.DB.prepare("DELETE FROM chapters WHERE story_id = ?").bind(id).run();
-  await env.DB.prepare("DELETE FROM ratings WHERE story_id = ?").bind(id).run();
+  await env.DB.prepare("DELETE FROM chapter_moods WHERE chapter_id IN (SELECT id FROM chapters WHERE story_id = ?)").bind(id).run();
+  await env.DB.prepare("DELETE FROM quotes WHERE story_id = ?").bind(id).run();
+  await env.DB.prepare("DELETE FROM reading_log WHERE story_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM reading_progress WHERE story_id = ?").bind(id).run();
+  await env.DB.prepare("DELETE FROM ratings WHERE story_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM library WHERE story_id = ?").bind(id).run();
+  await env.DB.prepare("DELETE FROM chapters WHERE story_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM stories WHERE id = ?").bind(id).run();
 
   return json({ ok: true });

@@ -49,6 +49,10 @@ export async function onRequestDelete({ request, env }) {
   if (!comment) return json({ error: "Comment not found." }, 404);
   if (comment.user_id !== user.id && user.role !== "admin") return forbidden();
 
+  await env.DB.prepare(
+    "DELETE FROM comment_votes WHERE comment_id = ? OR comment_id IN (SELECT id FROM comments WHERE parent_id = ?)"
+  ).bind(id, id).run();
+  await env.DB.prepare("DELETE FROM comments WHERE parent_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM comments WHERE id = ?").bind(id).run();
   return json({ ok: true });
 }

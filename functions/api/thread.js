@@ -14,13 +14,17 @@ export async function onRequestGet({ request, env }) {
   ).bind(id).first();
   if (!thread) return json({ error: "Thread not found." }, 404);
 
+  const user = await getUser(request, env);
+
   const { results: comments } = await env.DB.prepare(
-    `SELECT c.id, c.content, c.created_at, u.username, u.avatar, u.display_badge
+    `SELECT c.id, c.content, c.created_at, c.parent_id, u.username, u.avatar, u.display_badge,
+            (SELECT COUNT(*) FROM thread_comment_votes v WHERE v.comment_id = c.id AND v.vote = 1) AS likes,
+            (SELECT COUNT(*) FROM thread_comment_votes v WHERE v.comment_id = c.id AND v.vote = -1) AS dislikes,
+            COALESCE((SELECT v.vote FROM thread_comment_votes v WHERE v.comment_id = c.id AND v.user_id = ?), 0) AS my_vote
      FROM thread_comments c JOIN users u ON u.id = c.user_id
      WHERE c.thread_id = ? ORDER BY c.created_at ASC`
-  ).bind(id).all();
+  ).bind(user ? user.id : 0, id).all();
 
-  const user = await getUser(request, env);
   let myVote = 0;
   if (user) {
     const row = await env.DB.prepare("SELECT vote FROM thread_votes WHERE thread_id = ? AND user_id = ?")
@@ -42,16 +46,28 @@ export async function onRequestPost({ request, env }) {
   }
 
   const now = Date.now();
-  await env.DB.prepare(
-    "INSERT INTO thread_comments (thread_id, user_id, content, created_at) VALUES (?, ?, ?, ?)"
-  ).bind(body.thread_id, user.id, body.content.trim(), now).run();
+  const parentId = Number.isInteger(body.parent_id) ? body.parent_id : null;
+
+  const result = await env.DB.prepare(
+    "INSERT INTO thread_comments (thread_id, user_id, content, parent_id, created_at) VALUES (?, ?, ?, ?, ?)"
+  ).bind(body.thread_id, user.id, body.content.trim(), parentId, now).run();
 
   const thread = await env.DB.prepare("SELECT user_id, title FROM threads WHERE id = ?").bind(body.thread_id).first();
-  if (thread && thread.user_id !== user.id) {
+
+  // A reply pings the person replied to; a top-level comment pings the author.
+  if (parentId) {
+    const parent = await env.DB.prepare("SELECT user_id FROM thread_comments WHERE id = ?").bind(parentId).first();
+    if (parent && parent.user_id !== user.id) {
+      await env.DB.prepare(
+        "INSERT INTO notifications (user_id, message, created_at) VALUES (?, ?, ?)"
+      ).bind(parent.user_id,
+        `${user.username} replied to your comment${thread ? ` on "${thread.title}"` : ""}`, now).run();
+    }
+  } else if (thread && thread.user_id !== user.id) {
     await env.DB.prepare(
       "INSERT INTO notifications (user_id, message, created_at) VALUES (?, ?, ?)"
     ).bind(thread.user_id, `${user.username} commented on your post "${thread.title}"`, now).run();
   }
 
-  return json({ ok: true });
+  return json({ id: result.meta.last_row_id });
 }

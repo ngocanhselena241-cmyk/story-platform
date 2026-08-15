@@ -11,6 +11,13 @@
   --accent-dark: #55634f;
   --card-bg: #fffdf9;
   --danger: #b0503f;
+  /* Top nav sits on the deep sage; its text is the cream from the palette */
+  --nav-bg: #63715f;
+  --nav-fg: #fdf6ed;
+  --nav-brand: #fdf6ed;
+  --nav-hover: #a1bc98;
+  --nav-chip-bg: #a1bc98;
+  --nav-chip-fg: #2b3128;
 }
 
 [data-theme="dark"] {
@@ -23,6 +30,12 @@
   --accent-dark: #6fd39c;
   --card-bg: #222222;
   --danger: #e07a72;
+  --nav-bg: #1a201b;
+  --nav-fg: #9e9e9e;
+  --nav-brand: #4caf7d;
+  --nav-hover: #4caf7d;
+  --nav-chip-bg: #4caf7d;
+  --nav-chip-fg: #ffffff;
 }
 
 * { box-sizing: border-box; }
@@ -59,8 +72,19 @@ a:hover { color: var(--accent); }
 
 nav.topnav {
   border-bottom: 1px solid var(--border);
-  background: var(--bg-alt);
+  background: var(--nav-bg);
 }
+nav.topnav .brand { color: var(--nav-brand); }
+nav.topnav .nav-links a:not(.btn) { color: var(--nav-fg); }
+nav.topnav .nav-links a:not(.btn):hover { color: var(--nav-hover); }
+nav.topnav .theme-toggle { color: var(--nav-fg); border-color: var(--nav-fg); }
+nav.topnav .bell-btn { color: var(--nav-fg); }
+nav.topnav .bell-btn:hover { color: var(--nav-hover); }
+nav.topnav .profile-trigger { color: var(--nav-fg); }
+nav.topnav .profile-trigger:hover { background: rgba(255, 255, 255, 0.14); }
+nav.topnav .profile-avatar { background: var(--nav-chip-bg); color: var(--nav-chip-fg); }
+/* Dark mode's nav is unchanged from before the sage palette */
+[data-theme="dark"] nav.topnav .theme-toggle { color: var(--text); border-color: var(--border); }
 nav.topnav .container {
   display: flex; align-items: center; justify-content: space-between;
   padding-top: 14px; padding-bottom: 14px;
@@ -303,6 +327,21 @@ label { display: block; margin: 14px 0 6px; font-size: 0.9rem; color: var(--text
   font-weight: 700; font-size: 0.8rem;
 }
 .comment-badge { font-size: 0.85rem; margin-left: 4px; }
+.comment.is-reply { margin-left: 42px; }
+
+.comment-actions { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+.comment-actions .vote-btn,
+.comment-actions .link-btn {
+  background: none; border: 1px solid transparent; color: var(--text-muted);
+  font-size: 0.75rem; padding: 2px 7px; border-radius: 12px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.comment-actions .vote-btn:hover,
+.comment-actions .link-btn:hover { background: var(--bg-alt); color: var(--accent); }
+.comment-actions .vote-btn.up { color: var(--accent); border-color: var(--accent); }
+.comment-actions .vote-btn.down { color: var(--danger); border-color: var(--danger); }
+.comment-actions .del-link:hover { background: var(--bg-alt); color: var(--danger); }
+.reply-box { margin-top: 8px; }
 
 /* Paragraph comment button: only on hover */
 .para-comment-btn { opacity: 0; transition: opacity 0.15s; }

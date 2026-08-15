@@ -10,6 +10,9 @@ export async function onRequestDelete({ request, env }) {
   const id = url.searchParams.get("id");
   if (!id) return badRequest("Missing chapter id.");
 
+  await env.DB.prepare(
+    "DELETE FROM comment_votes WHERE comment_id IN (SELECT id FROM comments WHERE chapter_id = ?)"
+  ).bind(id).run();
   await env.DB.prepare("DELETE FROM comments WHERE chapter_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM chapter_moods WHERE chapter_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM quotes WHERE chapter_id = ?").bind(id).run();

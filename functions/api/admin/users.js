@@ -37,6 +37,11 @@ export async function onRequestDelete({ request, env }) {
   }
 
   await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(id).run();
+  await env.DB.prepare("DELETE FROM comment_votes WHERE user_id = ?").bind(id).run();
+  await env.DB.prepare("DELETE FROM thread_comment_votes WHERE user_id = ?").bind(id).run();
+  await env.DB.prepare(
+    "DELETE FROM comment_votes WHERE comment_id IN (SELECT id FROM comments WHERE user_id = ?)"
+  ).bind(id).run();
   await env.DB.prepare("DELETE FROM comments WHERE user_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM ratings WHERE user_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM reading_progress WHERE user_id = ?").bind(id).run();

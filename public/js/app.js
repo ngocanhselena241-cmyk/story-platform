@@ -195,6 +195,105 @@ function pickAndResizeImage(maxWidth, callback) {
   input.click();
 }
 
+// ---- Comments (shared by chapter, paragraph, and discussion comments) ----
+// Every comment renders the same way: author line, body, then an action row
+// with like / dislike / reply, plus delete for its author and admins.
+
+function renderComment(c, { user, isReply = false, canDelete = false } = {}) {
+  const avatar = c.avatar
+    ? `<img class="comment-avatar" src="${c.avatar}">`
+    : `<div class="comment-avatar">${escapeHtml(c.username[0].toUpperCase())}</div>`;
+  const badge = c.display_badge ? `<span class="comment-badge">${c.display_badge}</span>` : "";
+
+  return `<div class="comment${isReply ? " is-reply" : ""}" data-comment="${c.id}" data-parent-comment="${c.parent_id || ""}">
+    ${avatar}
+    <div style="flex:1;min-width:0;">
+      <div class="who">
+        <a href="/user.html?name=${encodeURIComponent(c.username)}">${escapeHtml(c.username)}</a>${badge}
+        <span class="when">${timeAgo(c.created_at)}</span>
+      </div>
+      <div style="white-space:pre-wrap;">${escapeHtml(c.content)}</div>
+      <div class="comment-actions">
+        <button class="vote-btn${c.my_vote === 1 ? " up" : ""}" data-id="${c.id}" data-vote="1" title="Like">
+          ${icon("thumbUp")}<span class="like-n">${c.likes || 0}</span>
+        </button>
+        <button class="vote-btn${c.my_vote === -1 ? " down" : ""}" data-id="${c.id}" data-vote="-1" title="Dislike">
+          ${icon("thumbDown")}<span class="dislike-n">${c.dislikes || 0}</span>
+        </button>
+        ${user ? `<button class="link-btn reply-btn" data-id="${c.id}">Reply</button>` : ""}
+        ${canDelete ? `<button class="link-btn del-link comment-del-btn" data-id="${c.id}" title="Delete">${icon("trash")}</button>` : ""}
+      </div>
+      <div class="reply-box" data-parent="${c.id}" style="display:none;">
+        <textarea rows="2" placeholder="Write a reply..."></textarea>
+        <button class="small reply-submit" data-parent="${c.id}" style="margin-top:6px;">Post reply</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// A comment list is one level deep: replies to a reply attach to its parent.
+function renderCommentTree(comments, opts) {
+  const parents = comments.filter(c => !c.parent_id);
+  return parents.map(p => {
+    const replies = comments.filter(c => c.parent_id === p.id);
+    return renderComment(p, { ...opts, isReply: false, canDelete: opts.canDelete(p) })
+      + replies.map(r => renderComment(r, { ...opts, isReply: true, canDelete: opts.canDelete(r) })).join("");
+  }).join("");
+}
+
+// kind: "chapter" | "thread". onReply(parentId, content) and onDelete(id) are
+// called after the caller's own API work so the list can be reloaded.
+function wireComments(container, { kind, user, onReply, onDelete }) {
+  container.querySelectorAll(".vote-btn").forEach(btn => {
+    btn.onclick = async () => {
+      if (!user) { window.location.href = "/login.html"; return; }
+      try {
+        const res = await api("/api/comment-vote", { method: "POST", body: JSON.stringify({
+          comment_id: Number(btn.dataset.id), vote: Number(btn.dataset.vote), kind
+        })});
+        const row = btn.closest(".comment-actions");
+        row.querySelector(".like-n").textContent = res.likes;
+        row.querySelector(".dislike-n").textContent = res.dislikes;
+        row.querySelectorAll(".vote-btn").forEach(b => b.classList.remove("up", "down"));
+        if (res.my_vote === 1) row.querySelector('[data-vote="1"]').classList.add("up");
+        if (res.my_vote === -1) row.querySelector('[data-vote="-1"]').classList.add("down");
+      } catch (e) {}
+    };
+  });
+
+  container.querySelectorAll(".reply-btn").forEach(btn => {
+    btn.onclick = () => {
+      const box = container.querySelector(`.reply-box[data-parent="${btn.dataset.id}"]`);
+      if (!box) return;
+      box.style.display = box.style.display === "none" ? "block" : "none";
+      if (box.style.display === "block") box.querySelector("textarea").focus();
+    };
+  });
+
+  container.querySelectorAll(".reply-submit").forEach(btn => {
+    btn.onclick = async () => {
+      const box = btn.closest(".reply-box");
+      const content = box.querySelector("textarea").value.trim();
+      if (!content || !onReply) return;
+      // Replying to a reply keeps the conversation under the same top comment.
+      const target = container.querySelector(`.comment[data-comment="${btn.dataset.parent}"]`);
+      const parentId = target && target.classList.contains("is-reply")
+        ? Number(target.dataset.parentComment || btn.dataset.parent)
+        : Number(btn.dataset.parent);
+      await onReply(parentId, content);
+    };
+  });
+
+  if (onDelete) {
+    container.querySelectorAll(".comment-del-btn").forEach(btn => {
+      btn.onclick = async () => {
+        if (!confirm("Delete this comment?")) return;
+        await onDelete(Number(btn.dataset.id));
+      };
+    });
+  }
+}
+
 // ---- Cover card renderer (used on homepage grids) ----
 function renderCoverCard(s) {
   const rating = s.avg_rating ? Number(s.avg_rating).toFixed(1) : "—";

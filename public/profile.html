@@ -46,6 +46,12 @@ async function load() {
       </div>
     </div>
 
+    <label>Username</label>
+    <input id="username" value="${escapeHtml(profile.username)}" maxlength="20">
+    <div class="muted" style="font-size:0.8rem;margin-top:4px;">
+      3–20 characters: letters, numbers, dots, dashes, underscores.
+    </div>
+
     <label>Bio</label>
     <textarea id="bio" rows="3">${escapeHtml(profile.bio || "")}</textarea>
 
@@ -98,13 +104,16 @@ async function load() {
   document.getElementById("save-btn").onclick = async () => {
     const msg = document.getElementById("msg");
     try {
-      await api("/api/profile", { method: "PUT", body: JSON.stringify({
+      const { username } = await api("/api/profile", { method: "PUT", body: JSON.stringify({
+        username: document.getElementById("username").value,
         bio: document.getElementById("bio").value,
         avatar: avatarData,
         display_badge: chosenBadge
       })});
       msg.className = "success-msg";
       msg.textContent = "Profile saved!";
+      // The nav bar and the avatar initial both show the name — refresh them.
+      if (username !== profile.username) load();
     } catch (e) {
       msg.className = "error-msg";
       msg.textContent = e.message;

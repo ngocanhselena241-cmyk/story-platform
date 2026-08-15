@@ -63,10 +63,9 @@ async function load() {
       document.getElementById("c-btn").onclick = async () => {
         const content = document.getElementById("c-input").value.trim();
         if (!content) return;
-        await api("/api/thread", { method: "POST", body: JSON.stringify({ thread_id: threadId, content }) });
+        await api("/api/thread", { method: "POST", body: JSON.stringify({ thread_id: Number(threadId), content }) });
         document.getElementById("c-input").value = "";
-        const { comments } = await api(`/api/thread?id=${threadId}`);
-        renderComments(comments);
+        await reloadComments();
       };
     } else {
       document.getElementById("comment-form").innerHTML = `<p class="muted"><a href="/login.html">Log in</a> to comment.</p>`;
@@ -76,22 +75,26 @@ async function load() {
   }
 }
 
+async function reloadComments() {
+  const { comments } = await api(`/api/thread?id=${threadId}`);
+  renderComments(comments);
+}
+
 function renderComments(comments) {
-  document.getElementById("comments").innerHTML = comments.length
-    ? comments.map(c => {
-        const avatar = c.avatar
-          ? `<img class="comment-avatar" src="${c.avatar}">`
-          : `<div class="comment-avatar">${escapeHtml(c.username[0].toUpperCase())}</div>`;
-        return `<div class="comment">
-          ${avatar}
-          <div style="flex:1;">
-            <div class="who"><a href="/user.html?name=${encodeURIComponent(c.username)}">${escapeHtml(c.username)}</a>${c.display_badge ? `<span class="comment-badge">${c.display_badge}</span>` : ""}
-              <span class="when">${timeAgo(c.created_at)}</span></div>
-            <div>${escapeHtml(c.content)}</div>
-          </div>
-        </div>`;
-      }).join("")
+  const el = document.getElementById("comments");
+  const opts = { kind: "thread", user: currentUser, canDelete: () => false };
+  el.innerHTML = comments.length
+    ? renderCommentTree(comments, opts)
     : `<p class="muted">No comments yet.</p>`;
+  wireComments(el, {
+    ...opts,
+    onReply: async (parentId, content) => {
+      await api("/api/thread", { method: "POST", body: JSON.stringify({
+        thread_id: Number(threadId), content, parent_id: parentId
+      })});
+      await reloadComments();
+    }
+  });
 }
 
 load();

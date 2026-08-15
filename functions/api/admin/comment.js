@@ -10,6 +10,10 @@ export async function onRequestDelete({ request, env }) {
   const id = url.searchParams.get("id");
   if (!id) return badRequest("Missing comment id.");
 
+  await env.DB.prepare(
+    "DELETE FROM comment_votes WHERE comment_id = ? OR comment_id IN (SELECT id FROM comments WHERE parent_id = ?)"
+  ).bind(id, id).run();
+  await env.DB.prepare("DELETE FROM comments WHERE parent_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM comments WHERE id = ?").bind(id).run();
   return json({ ok: true });
 }

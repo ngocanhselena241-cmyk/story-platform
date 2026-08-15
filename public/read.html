@@ -284,76 +284,38 @@ async function loadMoodPicker() {
   });
 }
 
-function canDelete(c) {
-  return currentUser && (currentUser.role === "admin" || currentUser.username === c.username);
+function mayDelete(c) {
+  return !!currentUser && (currentUser.role === "admin" || currentUser.username === c.username);
 }
 
-function commentHtml(c, isReply) {
-  const avatar = c.avatar
-    ? `<img class="comment-avatar" src="${c.avatar}">`
-    : `<div class="comment-avatar">${escapeHtml(c.username[0].toUpperCase())}</div>`;
-  return `<div class="comment" style="${isReply === true ? "margin-left:42px;" : ""}">
-    ${avatar}
-    <div style="flex:1;">
-      <div class="who"><a href="/user.html?name=${encodeURIComponent(c.username)}">${escapeHtml(c.username)}</a>${c.display_badge ? `<span class="comment-badge">${c.display_badge}</span>` : ""}
-        <span class="when">${timeAgo(c.created_at)}</span>
-        ${currentUser && !isReply ? `<button class="small secondary reply-btn" data-id="${c.id}" style="margin-left:8px;padding:1px 7px;font-size:0.7rem;">Reply</button>` : ""}
-        ${canDelete(c) ? `<button class="small danger comment-del-btn" data-id="${c.id}" style="margin-left:6px;padding:1px 7px;font-size:0.7rem;" title="Delete comment">${icon("trash")}</button>` : ""}
-      </div>
-      <div>${escapeHtml(c.content)}</div>
-      <div class="reply-box" data-parent="${c.id}" style="display:none;margin-top:6px;">
-        <textarea rows="2" placeholder="Write a reply..."></textarea>
-        <button class="small reply-submit" data-parent="${c.id}" style="margin-top:4px;">Post reply</button>
-      </div>
-    </div>
-  </div>`;
-}
-
-function wireReplies(container) {
-  container.querySelectorAll(".reply-btn").forEach(btn => {
-    btn.onclick = () => {
-      const box = container.querySelector(`.reply-box[data-parent="${btn.dataset.id}"]`);
-      if (box) box.style.display = box.style.display === "none" ? "block" : "none";
-    };
-  });
-  container.querySelectorAll(".reply-submit").forEach(btn => {
-    btn.onclick = async () => {
-      const box = btn.closest(".reply-box");
-      const content = box.querySelector("textarea").value.trim();
-      if (!content) return;
-      await api("/api/comment", { method: "POST", body: JSON.stringify({
-        chapter_id: chapterId, content, parent_id: Number(btn.dataset.parent)
-      })});
-      loadComments();
-    };
-  });
-}
-
-function wireCommentDeletes(container) {
-  container.querySelectorAll(".comment-del-btn").forEach(btn => {
-    btn.onclick = async () => {
-      if (!confirm("Delete this comment?")) return;
-      await api(`/api/comment?id=${btn.dataset.id}`, { method: "DELETE" });
-      loadComments();
-    };
-  });
-}
+const commentOpts = () => ({
+  kind: "chapter",
+  user: currentUser,
+  canDelete: mayDelete,
+  onDelete: async (id) => {
+    await api(`/api/comment?id=${id}`, { method: "DELETE" });
+    loadComments();
+  }
+});
 
 async function loadComments() {
   const { comments } = await api(`/api/comments?chapter=${chapterId}`);
   allComments = comments;
 
-  const general = comments.filter(c => (c.paragraph_index === null || c.paragraph_index === undefined));
-  const parents = general.filter(c => !c.parent_id);
+  const general = comments.filter(c => c.paragraph_index === null || c.paragraph_index === undefined);
   const commentsEl = document.getElementById("comments");
-  commentsEl.innerHTML = parents.length
-    ? parents.map(p => {
-        const replies = general.filter(c => c.parent_id === p.id);
-        return commentHtml(p, false) + replies.map(r => commentHtml(r, true)).join("");
-      }).join("")
+  commentsEl.innerHTML = general.length
+    ? renderCommentTree(general, commentOpts())
     : `<p class="muted">No comments yet.</p>`;
-  wireCommentDeletes(commentsEl);
-  wireReplies(commentsEl);
+  wireComments(commentsEl, {
+    ...commentOpts(),
+    onReply: async (parentId, content) => {
+      await api("/api/comment", { method: "POST", body: JSON.stringify({
+        chapter_id: chapterId, content, parent_id: parentId
+      })});
+      loadComments();
+    }
+  });
 
   document.querySelectorAll(".para-count").forEach(span => {
     const n = comments.filter(c => c.paragraph_index === Number(span.dataset.para)).length;
@@ -367,7 +329,7 @@ function toggleParaPanel(paraIndex) {
 
   const paraComments = allComments.filter(c => c.paragraph_index === paraIndex);
   let html = paraComments.length
-    ? paraComments.map(c => commentHtml(c, "flat")).join("")
+    ? renderCommentTree(paraComments, commentOpts())
     : `<p class="muted">No comments on this paragraph yet.</p>`;
 
   if (currentUser) {
@@ -380,7 +342,24 @@ function toggleParaPanel(paraIndex) {
 
   panel.innerHTML = html;
   panel.style.display = "block";
-  wireCommentDeletes(panel);
+  wireComments(panel, {
+    ...commentOpts(),
+    onDelete: async (id) => {
+      await api(`/api/comment?id=${id}`, { method: "DELETE" });
+      await loadComments();
+      panel.style.display = "none";
+      toggleParaPanel(paraIndex);
+    },
+    // A reply to a paragraph comment stays pinned to that paragraph.
+    onReply: async (parentId, content) => {
+      await api("/api/comment", { method: "POST", body: JSON.stringify({
+        chapter_id: chapterId, content, parent_id: parentId, paragraph_index: paraIndex
+      })});
+      await loadComments();
+      panel.style.display = "none";
+      toggleParaPanel(paraIndex);
+    }
+  });
 
   const submitBtn = panel.querySelector(".para-submit");
   if (submitBtn) {

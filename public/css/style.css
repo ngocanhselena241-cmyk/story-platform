@@ -75,8 +75,8 @@ nav.topnav {
   background: var(--nav-bg);
 }
 nav.topnav .brand { color: var(--nav-brand); }
-nav.topnav .nav-links a:not(.btn) { color: var(--nav-fg); }
-nav.topnav .nav-links a:not(.btn):hover { color: var(--nav-hover); }
+nav.topnav .nav-links > a:not(.btn) { color: var(--nav-fg); }
+nav.topnav .nav-links > a:not(.btn):hover { color: var(--nav-hover); }
 nav.topnav .theme-toggle { color: var(--nav-fg); border-color: var(--nav-fg); }
 nav.topnav .bell-btn { color: var(--nav-fg); }
 nav.topnav .bell-btn:hover { color: var(--nav-hover); }
@@ -182,9 +182,10 @@ label { display: block; margin: 14px 0 6px; font-size: 0.9rem; color: var(--text
 }
 .profile-menu:hover .profile-dropdown { display: block; }
 .profile-dropdown a {
-  display: block; padding: 8px 12px; border-radius: 6px; font-size: 0.92rem; color: var(--text);
+  display: block; padding: 8px 12px; border-radius: 6px; font-size: 0.92rem;
+  color: var(--accent);
 }
-.profile-dropdown a:hover { background: var(--bg-alt); color: var(--accent); }
+.profile-dropdown a:hover { background: var(--bg-alt); color: var(--accent-dark); font-weight: 600; }
 
 /* Cover-based story grid */
 .story-grid {

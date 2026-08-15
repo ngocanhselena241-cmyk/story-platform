@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Livvic:wght@400;600&family=Lora:wght@400;600&family=Quicksand:wght@400;600&family=Philosopher:wght@400;700&family=Merriweather:wght@400;700&family=Nunito:wght@400;700&display=swap');
+
 :root {
   --bg: #ffffff;
   --bg-alt: #f5f7f5;
@@ -235,3 +237,78 @@ label { display: block; margin: 14px 0 6px; font-size: 0.9rem; color: var(--text
   font-size: 1.1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
 }
 #scroll-btns button:hover { background: var(--accent); color: #fff; }
+
+/* ---- Round 7 ---- */
+
+/* Bell + dropdown */
+.bell-wrap { position: relative; }
+.bell-btn { background: none; border: none; font-size: 1.15rem; padding: 4px 8px; position: relative; color: var(--text); }
+.bell-btn:hover { background: none; color: var(--accent); }
+.bell-count {
+  position: absolute; top: -2px; right: -2px; background: var(--danger); color: #fff;
+  border-radius: 10px; font-size: 0.62rem; padding: 1px 5px; font-weight: 700;
+}
+.bell-dropdown {
+  display: none; position: absolute; right: 0; top: 100%; z-index: 70; width: 290px;
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+  max-height: 340px; overflow-y: auto; box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+.bell-dropdown.open { display: block; }
+.bell-dropdown a { display: block; padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.bell-dropdown a.unread { background: var(--bg-alt); font-weight: 600; }
+
+/* Comment avatars + badge */
+.comment { display: flex; gap: 10px; align-items: flex-start; }
+.comment-avatar {
+  width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+  background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.8rem;
+}
+.comment-badge { font-size: 0.85rem; margin-left: 4px; }
+
+/* Paragraph comment button: only on hover */
+.para-comment-btn { opacity: 0; transition: opacity 0.15s; }
+.para-wrap:hover .para-comment-btn { opacity: 1; }
+
+/* Reader top bar (read page only) */
+#reader-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 80;
+  background: var(--bg-alt); border-bottom: 1px solid var(--border);
+  transition: transform 0.25s;
+}
+#reader-bar.hidden { transform: translateY(-100%); }
+#reader-bar .inner {
+  max-width: 900px; margin: 0 auto; padding: 12px 20px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+#reader-bar .story-name {
+  flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-weight: 600; font-size: 0.95rem;
+}
+
+/* Reader settings drawer (right side) */
+#reader-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 300px; z-index: 95;
+  background: var(--card-bg); border-left: 1px solid var(--border);
+  transform: translateX(100%); transition: transform 0.25s; overflow-y: auto; padding: 18px;
+}
+#reader-drawer.open { transform: translateX(0); }
+#drawer-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 94;
+}
+#drawer-overlay.open { display: block; }
+#reader-drawer .chapter-jump { display: block; padding: 7px 10px; border-radius: 6px; font-size: 0.88rem; }
+#reader-drawer .chapter-jump:hover { background: var(--bg-alt); }
+#reader-drawer .chapter-jump.current { background: var(--accent); color: #fff; }
+
+/* Paged reading modes */
+.reader-paged {
+  overflow: hidden; position: relative;
+}
+.reader-paged .pages {
+  height: 100%; column-gap: 40px; overflow-x: auto; scroll-snap-type: x mandatory;
+  scroll-behavior: smooth; scrollbar-width: none;
+}
+.reader-paged .pages::-webkit-scrollbar { display: none; }
+.page-nav-btns { display: flex; justify-content: space-between; margin-top: 12px; }
+.reader-cols-2 { column-count: 2; column-gap: 40px; }

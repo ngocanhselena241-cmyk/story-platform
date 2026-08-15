@@ -8,18 +8,45 @@
 </head>
 <body>
 <div id="chapter-progress"></div>
-<div id="nav"></div>
-<div class="container" style="padding-top:24px;">
-  <div id="reader-settings" style="text-align:right;margin-bottom:10px;">
-    <span id="edit-chapter-slot"></span>
-    <button class="secondary small" id="settings-toggle">Aa</button>
-    <div id="settings-panel" style="display:none;text-align:left;max-width:260px;margin-left:auto;padding:12px;" class="card">
-      <label>Font size</label>
-      <input type="range" id="font-size-slider" min="14" max="26" value="18">
-      <label>Line spacing</label>
-      <input type="range" id="line-height-slider" min="12" max="24" value="16">
-    </div>
+
+<div id="reader-bar">
+  <div class="inner">
+    <a class="brand" href="/index.html">Nayedaba</a>
+    <a class="story-name" id="bar-story" href="#"></a>
+    <button class="secondary small" id="drawer-toggle">☰</button>
   </div>
+</div>
+<div style="height:58px;"></div>
+
+<div id="drawer-overlay"></div>
+<div id="reader-drawer">
+  <div class="section-title" style="margin-top:0;">Viewer settings</div>
+  <label>Font size</label>
+  <input type="range" id="font-size-slider" min="14" max="26" value="18">
+  <label>Line spacing</label>
+  <input type="range" id="line-height-slider" min="12" max="24" value="16">
+  <label>Font</label>
+  <select id="font-select">
+    <option value="Georgia, serif">Georgia (default)</option>
+    <option value="'Lora', serif">Lora</option>
+    <option value="'Merriweather', serif">Merriweather</option>
+    <option value="'Philosopher', sans-serif">Philosopher</option>
+    <option value="'Livvic', sans-serif">Livvic</option>
+    <option value="'Quicksand', sans-serif">Quicksand</option>
+    <option value="'Nunito', sans-serif">Nunito</option>
+  </select>
+  <label>Layout</label>
+  <select id="layout-select">
+    <option value="scroll-1">Single column · scroll</option>
+    <option value="scroll-2">Double column · scroll</option>
+    <option value="paged-1">Single page · flip</option>
+    <option value="paged-2">Double page · flip</option>
+  </select>
+  <div class="section-title">Chapters</div>
+  <div id="drawer-chapters"><p class="muted">Loading...</p></div>
+</div>
+
+<div class="container" style="padding-top:10px;">
   <div id="content"><p class="muted">Loading...</p></div>
 
   <div id="mood-section" style="display:none;">
@@ -48,40 +75,103 @@ let currentUser = null;
 let chapterId = null;
 let allComments = [];
 
-function applyReaderSettings() {
-  const fontSize = localStorage.getItem("reader-font-size") || "18";
-  const lineHeight = localStorage.getItem("reader-line-height") || "16";
-  document.documentElement.style.setProperty("--reader-font-size", fontSize + "px");
-  document.documentElement.style.setProperty("--reader-line-height", (lineHeight / 10));
-  document.getElementById("font-size-slider").value = fontSize;
-  document.getElementById("line-height-slider").value = lineHeight;
-}
-document.getElementById("settings-toggle").onclick = () => {
-  const panel = document.getElementById("settings-panel");
-  panel.style.display = panel.style.display === "none" ? "block" : "none";
+// ---- Reader settings ----
+const settings = {
+  get fontSize() { return localStorage.getItem("reader-font-size") || "18"; },
+  set fontSize(v) { localStorage.setItem("reader-font-size", v); },
+  get lineHeight() { return localStorage.getItem("reader-line-height") || "16"; },
+  set lineHeight(v) { localStorage.setItem("reader-line-height", v); },
+  get font() { return localStorage.getItem("reader-font") || "Georgia, serif"; },
+  set font(v) { localStorage.setItem("reader-font", v); },
+  get layout() { return localStorage.getItem("reader-layout") || "scroll-1"; },
+  set layout(v) { localStorage.setItem("reader-layout", v); }
 };
-document.getElementById("font-size-slider").oninput = (e) => {
-  localStorage.setItem("reader-font-size", e.target.value);
-  document.documentElement.style.setProperty("--reader-font-size", e.target.value + "px");
-};
-document.getElementById("line-height-slider").oninput = (e) => {
-  localStorage.setItem("reader-line-height", e.target.value);
-  document.documentElement.style.setProperty("--reader-line-height", (e.target.value / 10));
-};
-applyReaderSettings();
 
-// Chapter progress bar based on scroll position
+function applySettings() {
+  document.documentElement.style.setProperty("--reader-font-size", settings.fontSize + "px");
+  document.documentElement.style.setProperty("--reader-line-height", settings.lineHeight / 10);
+  document.documentElement.style.setProperty("--reader-font", settings.font);
+  document.getElementById("font-size-slider").value = settings.fontSize;
+  document.getElementById("line-height-slider").value = settings.lineHeight;
+  document.getElementById("font-select").value = settings.font;
+  document.getElementById("layout-select").value = settings.layout;
+  applyLayout();
+}
+
+function applyLayout() {
+  const layout = settings.layout;
+  const reader = document.querySelector(".reader-text");
+  if (!reader) return;
+  const body = reader.querySelector(".reader-body");
+  const nav = document.getElementById("page-nav");
+  reader.classList.remove("reader-paged");
+  if (body) { body.classList.remove("pages", "reader-cols-2"); body.style.height = ""; }
+  if (nav) nav.style.display = "none";
+
+  if (!body) return;
+  if (layout === "scroll-2") {
+    body.classList.add("reader-cols-2");
+  } else if (layout.startsWith("paged")) {
+    reader.classList.add("reader-paged");
+    body.classList.add("pages");
+    const h = window.innerHeight - 220;
+    body.style.height = h + "px";
+    body.style.columnWidth = (layout === "paged-2" ? (body.clientWidth / 2 - 20) : body.clientWidth) + "px";
+    if (nav) nav.style.display = "flex";
+  }
+}
+
+function pageFlip(dir) {
+  const body = document.querySelector(".reader-body");
+  if (!body) return;
+  body.scrollBy({ left: dir * body.clientWidth, behavior: "smooth" });
+}
+
+document.getElementById("font-size-slider").oninput = (e) => { settings.fontSize = e.target.value; applySettings(); };
+document.getElementById("line-height-slider").oninput = (e) => { settings.lineHeight = e.target.value; applySettings(); };
+document.getElementById("font-select").onchange = (e) => { settings.font = e.target.value; applySettings(); };
+document.getElementById("layout-select").onchange = (e) => { settings.layout = e.target.value; applySettings(); };
+window.addEventListener("resize", applyLayout);
+document.addEventListener("keydown", (e) => {
+  if (settings.layout.startsWith("paged")) {
+    if (e.key === "ArrowRight") pageFlip(1);
+    if (e.key === "ArrowLeft") pageFlip(-1);
+  }
+});
+
+// ---- Drawer ----
+const drawer = document.getElementById("reader-drawer");
+const overlay = document.getElementById("drawer-overlay");
+document.getElementById("drawer-toggle").onclick = () => {
+  drawer.classList.toggle("open");
+  overlay.classList.toggle("open");
+};
+overlay.onclick = () => { drawer.classList.remove("open"); overlay.classList.remove("open"); };
+
+// ---- Hide bar on scroll down, show on scroll up ----
+let lastScroll = 0;
 window.addEventListener("scroll", () => {
+  const bar = document.getElementById("reader-bar");
+  const y = window.scrollY;
+  if (y > lastScroll && y > 80) bar.classList.add("hidden");
+  else bar.classList.remove("hidden");
+  lastScroll = y;
+
   const h = document.documentElement;
   const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
   document.getElementById("chapter-progress").style.width = `${Math.min(100, Math.max(0, pct))}%`;
 });
 
 async function load() {
-  currentUser = await renderNav();
+  try { ({ user: currentUser } = await api("/api/me")); } catch (e) {}
   try {
     const { chapter, story, prev_chapter, next_chapter } = await api(`/api/chapter?story=${storyId}&num=${chapterNum}`);
     chapterId = chapter.id;
+
+    const barStory = document.getElementById("bar-story");
+    barStory.textContent = story.title;
+    barStory.href = `/story.html?id=${storyId}`;
+    document.title = `Ch. ${chapter.chapter_number} — ${story.title}`;
 
     const paragraphs = chapter.content.split(/\n+/).filter(p => p.trim());
     const paraHtml = paragraphs.map((p, i) => `
@@ -91,16 +181,29 @@ async function load() {
       </div>`).join("");
 
     document.getElementById("content").innerHTML = `
-      <div class="reader-text">
-        <p class="muted"><a href="/story.html?id=${storyId}">${escapeHtml(story.title)}</a></p>
+      <div class="reader-text" style="font-family:var(--reader-font, Georgia, serif);">
         <h1>Chapter ${chapter.chapter_number}${chapter.title ? ": " + escapeHtml(chapter.title) : ""}</h1>
-        ${paraHtml}
+        <div class="reader-body">${paraHtml}</div>
+        <div id="page-nav" class="page-nav-btns" style="display:none;">
+          <button class="secondary" onclick="pageFlip(-1)">← Page</button>
+          <button class="secondary" onclick="pageFlip(1)">Page →</button>
+        </div>
         <div class="chapter-nav">
           ${prev_chapter ? `<a class="btn secondary" href="/read.html?story=${storyId}&chapter=${prev_chapter}">← Chapter ${prev_chapter}</a>` : "<span></span>"}
           ${next_chapter ? `<a class="btn" href="/read.html?story=${storyId}&chapter=${next_chapter}">Chapter ${next_chapter} →</a>` : "<span></span>"}
         </div>
       </div>
     `;
+    applySettings();
+
+    // Chapter list in drawer
+    try {
+      const { chapters } = await api(`/api/story?id=${storyId}`);
+      document.getElementById("drawer-chapters").innerHTML = chapters.map(c =>
+        `<a class="chapter-jump ${String(c.chapter_number) === String(chapterNum) ? "current" : ""}"
+           href="/read.html?story=${storyId}&chapter=${c.chapter_number}">
+           Ch. ${c.chapter_number}${c.title ? ": " + escapeHtml(c.title) : ""}</a>`).join("");
+    } catch (e) {}
 
     document.querySelectorAll(".para-comment-btn").forEach(btn => {
       btn.onclick = () => toggleParaPanel(Number(btn.dataset.para));
@@ -109,15 +212,6 @@ async function load() {
     if (currentUser) {
       api("/api/progress", { method: "POST", body: JSON.stringify({ story_id: storyId, chapter_id: chapterId }) }).catch(() => {});
       loadMoodPicker();
-
-      // Edit button for the story's author
-      try {
-        const { stories } = await api("/api/my-stories");
-        if (stories.some(s => String(s.id) === String(storyId))) {
-          document.getElementById("edit-chapter-slot").innerHTML =
-            `<a class="btn secondary small" href="/upload.html?story=${storyId}">✏️ Edit</a> `;
-        }
-      } catch (e) {}
 
       document.getElementById("quote-section").style.display = "block";
       document.getElementById("quote-btn").onclick = async () => {
@@ -182,11 +276,18 @@ function canDelete(c) {
 }
 
 function commentHtml(c) {
+  const avatar = c.avatar
+    ? `<img class="comment-avatar" src="${c.avatar}">`
+    : `<div class="comment-avatar">${escapeHtml(c.username[0].toUpperCase())}</div>`;
   return `<div class="comment">
-    <div class="who">${escapeHtml(c.username)} <span class="when">${timeAgo(c.created_at)}</span>
-      ${canDelete(c) ? `<button class="small danger comment-del-btn" data-id="${c.id}" style="margin-left:8px;padding:1px 7px;font-size:0.7rem;">🗑</button>` : ""}
+    ${avatar}
+    <div style="flex:1;">
+      <div class="who"><a href="/user.html?name=${encodeURIComponent(c.username)}">${escapeHtml(c.username)}</a>${c.display_badge ? `<span class="comment-badge">${c.display_badge}</span>` : ""}
+        <span class="when">${timeAgo(c.created_at)}</span>
+        ${canDelete(c) ? `<button class="small danger comment-del-btn" data-id="${c.id}" style="margin-left:8px;padding:1px 7px;font-size:0.7rem;">🗑</button>` : ""}
+      </div>
+      <div>${escapeHtml(c.content)}</div>
     </div>
-    <div>${escapeHtml(c.content)}</div>
   </div>`;
 }
 
@@ -204,7 +305,6 @@ async function loadComments() {
   const { comments } = await api(`/api/comments?chapter=${chapterId}`);
   allComments = comments;
 
-  // General (whole-chapter) comments
   const general = comments.filter(c => c.paragraph_index === null || c.paragraph_index === undefined);
   const commentsEl = document.getElementById("comments");
   commentsEl.innerHTML = general.length
@@ -212,7 +312,6 @@ async function loadComments() {
     : `<p class="muted">No comments yet.</p>`;
   wireCommentDeletes(commentsEl);
 
-  // Per-paragraph counts
   document.querySelectorAll(".para-count").forEach(span => {
     const n = comments.filter(c => c.paragraph_index === Number(span.dataset.para)).length;
     span.textContent = n ? n : "";

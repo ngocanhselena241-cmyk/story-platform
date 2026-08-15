@@ -35,9 +35,18 @@ async function renderNav() {
     try { ({ profile } = await api("/api/profile")); } catch (e) {}
   }
 
-  const mainLinks = [`<a href="/index.html">Home</a>`];
+  const mainLinks = [`<a href="/index.html">Home</a>`, `<a href="/top.html">Top</a>`];
+  if (user) mainLinks.push(`<a href="/report.html">Report</a>`);
   if (user && (user.role === "uploader" || user.role === "admin")) mainLinks.push(`<a href="/upload.html">Upload</a>`);
   if (user && user.role === "admin") mainLinks.push(`<a href="/admin.html">Admin</a>`);
+
+  let bellHtml = "";
+  if (user) {
+    bellHtml = `<div class="bell-wrap">
+      <button class="bell-btn" id="bell-btn">🔔<span class="bell-count" id="bell-count" style="display:none;"></span></button>
+      <div class="bell-dropdown" id="bell-dropdown"></div>
+    </div>`;
+  }
 
   let rightSide;
   if (user) {
@@ -63,10 +72,35 @@ async function renderNav() {
   el.innerHTML = `
     <nav class="topnav"><div class="container">
       <a class="brand" href="/index.html">Nayedaba</a>
-      <div class="nav-links">${mainLinks.join("")}<button class="theme-toggle" id="theme-btn">🌓</button>${rightSide}</div>
+      <div class="nav-links">${mainLinks.join("")}${bellHtml}<button class="theme-toggle" id="theme-btn">🌓</button>${rightSide}</div>
     </div></nav>`;
 
   document.getElementById("theme-btn").onclick = toggleTheme;
+
+  if (user) {
+    const bellBtn = document.getElementById("bell-btn");
+    const dropdown = document.getElementById("bell-dropdown");
+    try {
+      const { notifications, unread } = await api("/api/notifications");
+      const count = document.getElementById("bell-count");
+      if (unread > 0) { count.textContent = unread > 9 ? "9+" : unread; count.style.display = "inline-block"; }
+      dropdown.innerHTML = notifications.length
+        ? notifications.map(n => `<a class="${n.is_read ? "" : "unread"}"
+            href="${n.story_id ? `/read.html?story=${n.story_id}&chapter=${n.chapter_number}` : "#"}">
+            ${escapeHtml(n.message)}<div class="muted" style="font-size:0.72rem;">${timeAgo(n.created_at)}</div></a>`).join("")
+        : `<div style="padding:14px;" class="muted">No notifications yet.</div>`;
+      bellBtn.onclick = async () => {
+        dropdown.classList.toggle("open");
+        if (dropdown.classList.contains("open") && unread > 0) {
+          await api("/api/notifications", { method: "POST" });
+          document.getElementById("bell-count").style.display = "none";
+        }
+      };
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest(".bell-wrap")) dropdown.classList.remove("open");
+      });
+    } catch (e) {}
+  }
   const logoutLink = document.getElementById("logout-link");
   if (logoutLink) {
     logoutLink.onclick = async (e) => {

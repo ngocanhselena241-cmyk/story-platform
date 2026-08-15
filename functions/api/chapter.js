@@ -38,9 +38,13 @@ export async function onRequestPost({ request, env }) {
     return badRequest("story_id, chapter_number, and content are required.");
   }
 
-  const story = await env.DB.prepare("SELECT author_id FROM stories WHERE id = ?").bind(body.story_id).first();
+  const story = await env.DB.prepare("SELECT author_id, title FROM stories WHERE id = ?").bind(body.story_id).first();
   if (!story) return json({ error: "Story not found." }, 404);
   if (story.author_id !== user.id && user.role !== "admin") return forbidden();
+
+  const existing = await env.DB.prepare(
+    "SELECT id FROM chapters WHERE story_id = ? AND chapter_number = ?"
+  ).bind(body.story_id, body.chapter_number).first();
 
   const now = Date.now();
   await env.DB.prepare(
@@ -49,6 +53,20 @@ export async function onRequestPost({ request, env }) {
   ).bind(body.story_id, body.chapter_number, body.title || "", body.content, now).run();
 
   await env.DB.prepare("UPDATE stories SET updated_at = ? WHERE id = ?").bind(now, body.story_id).run();
+
+  // Brand-new chapter (not an edit): notify followers
+  if (!existing) {
+    const { results: followers } = await env.DB.prepare(
+      "SELECT user_id FROM follows WHERE story_id = ?"
+    ).bind(body.story_id).all();
+    for (const f of followers) {
+      if (f.user_id === user.id) continue;
+      await env.DB.prepare(
+        "INSERT INTO notifications (user_id, story_id, chapter_number, message, created_at) VALUES (?, ?, ?, ?, ?)"
+      ).bind(f.user_id, body.story_id, body.chapter_number,
+        `${story.title} — Chapter ${body.chapter_number} is out!`, now).run();
+    }
+  }
 
   return json({ ok: true });
 }

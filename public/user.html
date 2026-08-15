@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profile — Nayedaba</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="container" style="padding-top:24px;">
+  <div id="content"><p class="muted">Loading...</p></div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+async function load() {
+  await renderNav();
+  const name = new URLSearchParams(location.search).get("name");
+  const content = document.getElementById("content");
+  try {
+    const { user, reading, badges, stories } = await api(`/api/user?name=${encodeURIComponent(name)}`);
+    const avatar = user.avatar
+      ? `<img src="${user.avatar}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">`
+      : `<div style="width:80px;height:80px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;">${escapeHtml(user.username[0].toUpperCase())}</div>`;
+    const isUploader = user.role === "uploader" || user.role === "admin";
+
+    let html = `
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;">
+        ${avatar}
+        <div>
+          <div style="font-size:1.3rem;font-weight:700;">${escapeHtml(user.username)}</div>
+          <div class="muted" style="font-size:0.85rem;">${isUploader ? "✍️ Uploader" : "📖 Reader"} · joined ${new Date(user.created_at).toLocaleDateString()}</div>
+        </div>
+      </div>
+      ${user.bio ? `<p>${escapeHtml(user.bio)}</p>` : ""}
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin:10px 0;">
+        ${badges.map(b => `<div class="card" style="text-align:center;width:100px;padding:10px;">
+          <div style="font-size:1.5rem;">${b.icon}</div><div class="muted" style="font-size:0.7rem;">${b.label}</div>
+        </div>`).join("")}
+      </div>`;
+
+    if (isUploader) {
+      html += `<div class="section-title">Stories by ${escapeHtml(user.username)}</div>
+        <div class="story-grid">${stories.map(renderCoverCard).join("") || `<p class="muted">No published stories yet.</p>`}</div>`;
+    } else {
+      html += `<div class="section-title">Reading activity</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <div class="card" style="min-width:140px;"><div style="font-size:1.6rem;">${reading.chapters_read}</div><div class="muted">chapters read</div></div>
+          <div class="card" style="min-width:140px;"><div style="font-size:1.6rem;">${reading.stories_read}</div><div class="muted">stories started</div></div>
+        </div>`;
+    }
+    content.innerHTML = html;
+  } catch (e) {
+    content.innerHTML = `<p class="error-msg">User not found.</p>`;
+  }
+}
+load();
+</script>
+</body>
+</html>

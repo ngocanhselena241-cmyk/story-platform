@@ -48,6 +48,7 @@ async function load() {
         </div>
       </div>
       ${chapters.length ? `<a class="btn" href="/read.html?story=${storyId}&chapter=${chapters[0].chapter_number}">Start Reading</a>` : ""}
+      ${currentUser ? `<button class="secondary" id="follow-btn" style="margin-left:8px;">🔔 Follow</button>` : ""}
       ${currentUser ? `<div id="library-box" style="margin-top:16px;">
         <label>Add to your library</label>
         <select id="library-status">
@@ -105,6 +106,20 @@ async function load() {
       libSelect.onchange = async () => {
         if (!libSelect.value) return;
         await api("/api/library", { method: "POST", body: JSON.stringify({ story_id: storyId, status: libSelect.value }) });
+      };
+    }
+
+    const followBtn = document.getElementById("follow-btn");
+    if (followBtn) {
+      const refresh = async () => {
+        const { following, count } = await api(`/api/follow?story=${storyId}`);
+        followBtn.textContent = following ? `🔕 Following (${count})` : `🔔 Follow (${count})`;
+        followBtn.dataset.following = following;
+      };
+      await refresh();
+      followBtn.onclick = async () => {
+        await api("/api/follow", { method: "POST", body: JSON.stringify({ story_id: storyId }) });
+        refresh();
       };
     }
 

@@ -5,7 +5,7 @@ export async function onRequestGet({ request, env }) {
   const user = await getUser(request, env);
   if (!user) return unauthorized();
   const full = await env.DB.prepare(
-    "SELECT id, username, email, role, bio, avatar, created_at FROM users WHERE id = ?"
+    "SELECT id, username, email, role, bio, avatar, display_badge, created_at FROM users WHERE id = ?"
   ).bind(user.id).first();
   return json({ profile: full });
 }
@@ -22,8 +22,9 @@ export async function onRequestPut({ request, env }) {
     return badRequest("Avatar image is too large.");
   }
 
-  await env.DB.prepare("UPDATE users SET bio = COALESCE(?, bio), avatar = COALESCE(?, avatar) WHERE id = ?")
-    .bind(body.bio ?? null, body.avatar ?? null, user.id).run();
+  await env.DB.prepare(
+    "UPDATE users SET bio = COALESCE(?, bio), avatar = COALESCE(?, avatar), display_badge = COALESCE(?, display_badge) WHERE id = ?"
+  ).bind(body.bio ?? null, body.avatar ?? null, body.display_badge ?? null, user.id).run();
 
   return json({ ok: true });
 }

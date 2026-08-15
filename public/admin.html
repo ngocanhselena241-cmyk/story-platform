@@ -25,37 +25,109 @@ async function load() {
   gate.innerHTML = `
     <h1>Admin Panel</h1>
 
+    <div class="section-title">Open reports</div>
+    <div id="reports-list"><p class="muted">Loading...</p></div>
+
     <div class="section-title">Stories pending approval</div>
     <div id="pending-list"><p class="muted">Loading...</p></div>
 
-    <div class="section-title">Change a user's role</div>
-    <label>Username</label>
-    <input id="role-username">
-    <label>New role</label>
-    <select id="role-select">
-      <option value="reader">Reader</option>
-      <option value="uploader">Uploader</option>
-      <option value="admin">Admin</option>
-    </select>
-    <button id="role-btn" style="margin-top:16px;">Update role</button>
+    <div class="section-title">Manage accounts</div>
+    <label>Search by username (or leave empty and pick from the list)</label>
+    <input id="user-search" placeholder="Type to search...">
+    <label>Account</label>
+    <select id="user-select"></select>
+    <div style="display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap;">
+      <select id="role-select" style="max-width:150px;">
+        <option value="reader">Reader</option>
+        <option value="uploader">Uploader</option>
+        <option value="admin">Admin</option>
+      </select>
+      <button id="role-btn">Update role</button>
+      <button id="delete-user-btn" class="danger">Delete account</button>
+    </div>
     <div id="role-msg" class="error-msg"></div>
   `;
 
   loadPending();
+  loadReports();
+  loadUsers("");
+
+  let searchTimer;
+  document.getElementById("user-search").addEventListener("input", (e) => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => loadUsers(e.target.value.trim()), 250);
+  });
 
   document.getElementById("role-btn").onclick = async () => {
+    const sel = document.getElementById("user-select");
+    const username = sel.options[sel.selectedIndex]?.dataset.username;
+    const msg = document.getElementById("role-msg");
+    if (!username) return;
     try {
       await api("/api/admin/role", { method: "POST", body: JSON.stringify({
-        username: document.getElementById("role-username").value,
-        role: document.getElementById("role-select").value
+        username, role: document.getElementById("role-select").value
       })});
-      document.getElementById("role-msg").className = "success-msg";
-      document.getElementById("role-msg").textContent = "Role updated.";
+      msg.className = "success-msg";
+      msg.textContent = `Role updated for ${username}.`;
+      loadUsers(document.getElementById("user-search").value.trim());
     } catch (e) {
-      document.getElementById("role-msg").className = "error-msg";
-      document.getElementById("role-msg").textContent = e.message;
+      msg.className = "error-msg";
+      msg.textContent = e.message;
     }
   };
+
+  document.getElementById("delete-user-btn").onclick = async () => {
+    const sel = document.getElementById("user-select");
+    const id = sel.value;
+    const username = sel.options[sel.selectedIndex]?.dataset.username;
+    const msg = document.getElementById("role-msg");
+    if (!id) return;
+    if (!confirm(`Permanently delete the account "${username}" and all their activity?`)) return;
+    try {
+      await api(`/api/admin/users?id=${id}`, { method: "DELETE" });
+      msg.className = "success-msg";
+      msg.textContent = `Account ${username} deleted.`;
+      loadUsers(document.getElementById("user-search").value.trim());
+    } catch (e) {
+      msg.className = "error-msg";
+      msg.textContent = e.message;
+    }
+  };
+}
+
+async function loadUsers(q) {
+  const { users } = await api(`/api/admin/users${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+  const sel = document.getElementById("user-select");
+  sel.innerHTML = users.map(u =>
+    `<option value="${u.id}" data-username="${escapeHtml(u.username)}">${escapeHtml(u.username)} (${u.role})</option>`
+  ).join("") || `<option value="">No accounts found</option>`;
+  const first = users[0];
+  if (first) document.getElementById("role-select").value = first.role;
+  sel.onchange = () => {
+    const opt = sel.options[sel.selectedIndex];
+    const u = users.find(x => String(x.id) === sel.value);
+    if (u) document.getElementById("role-select").value = u.role;
+  };
+}
+
+async function loadReports() {
+  const { reports } = await api("/api/admin/reports");
+  const list = document.getElementById("reports-list");
+  list.innerHTML = reports.length ? "" : `<p class="muted">No open reports.</p>`;
+  reports.forEach(r => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `
+      <div><strong>${escapeHtml(r.target_type)}</strong> reported by ${escapeHtml(r.reporter_name)} · <span class="muted" style="font-size:0.8rem;">${timeAgo(r.created_at)}</span></div>
+      ${r.target_ref ? `<div class="muted" style="font-size:0.85rem;word-break:break-all;">Target: ${escapeHtml(r.target_ref)}</div>` : ""}
+      <div style="margin:6px 0;">${escapeHtml(r.reason)}</div>
+      <button class="small resolve-btn">Mark resolved</button>`;
+    div.querySelector(".resolve-btn").onclick = async () => {
+      await api("/api/admin/reports", { method: "PUT", body: JSON.stringify({ id: r.id }) });
+      loadReports();
+    };
+    list.appendChild(div);
+  });
 }
 
 async function loadPending() {

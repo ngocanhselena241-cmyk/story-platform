@@ -39,6 +39,14 @@ async function load() {
 
     <label>Bio</label>
     <textarea id="bio" rows="3">${escapeHtml(profile.bio || "")}</textarea>
+
+    <label>Badge shown next to your comments</label>
+    <div id="badge-picker" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="secondary small badge-opt" data-badge="">None</button>
+      ${badges.filter(b => b.earned).map(b =>
+        `<button class="secondary small badge-opt" data-badge="${b.icon}" title="${b.label}">${b.icon}</button>`).join("")}
+    </div>
+
     <button id="save-btn" style="margin-top:12px;">Save profile</button>
     <div id="msg" class="error-msg"></div>
 
@@ -62,12 +70,23 @@ async function load() {
     });
   };
 
+  let chosenBadge = profile.display_badge || "";
+  document.querySelectorAll(".badge-opt").forEach(btn => {
+    if (btn.dataset.badge === chosenBadge) btn.style.background = "var(--accent)";
+    btn.onclick = () => {
+      chosenBadge = btn.dataset.badge;
+      document.querySelectorAll(".badge-opt").forEach(b => b.style.background = "");
+      btn.style.background = "var(--accent)";
+    };
+  });
+
   document.getElementById("save-btn").onclick = async () => {
     const msg = document.getElementById("msg");
     try {
       await api("/api/profile", { method: "PUT", body: JSON.stringify({
         bio: document.getElementById("bio").value,
-        avatar: avatarData
+        avatar: avatarData,
+        display_badge: chosenBadge
       })});
       msg.className = "success-msg";
       msg.textContent = "Profile saved!";

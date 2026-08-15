@@ -11,7 +11,10 @@
 <div class="container" style="padding-top:24px;">
 
   <div style="margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap;">
-    <input id="search" placeholder="🔍 Search stories by title..." style="flex:1;min-width:180px;">
+    <div style="flex:1;min-width:200px;display:flex;">
+      <input id="search" placeholder="Search stories by title..." style="border-radius:6px 0 0 6px;">
+      <button id="search-btn" style="border-radius:0 6px 6px 0;">🔍</button>
+    </div>
     <select id="sort-select" style="max-width:170px;">
       <option value="updated">Recently Updated</option>
       <option value="popular">Most Popular</option>
@@ -31,7 +34,6 @@
   </div>
 
   <div id="continue-section"></div>
-  <div id="recommend-section"></div>
 
   <div class="section-title">✨ Recently Updated</div>
   <div id="recent-list" class="story-grid"><p class="muted">Loading...</p></div>
@@ -45,10 +47,54 @@
 <script>
 let selectedTags = [];
 
-async function load() {
-  const user = await renderNav();
+async function loadStoryList() {
+  const sort = document.getElementById("sort-select").value;
+  const status = document.getElementById("status-select").value;
+  const q = document.getElementById("search").value.trim();
+  let url = `/api/stories?sort=${sort}`;
+  if (status) url += `&status=${status}`;
+  if (q) url += `&q=${encodeURIComponent(q)}`;
+  if (selectedTags.length) url += `&genre=${encodeURIComponent(selectedTags.join(","))}`;
+  const listEl = document.getElementById("story-list");
+  listEl.innerHTML = `<p class="muted">Loading...</p>`;
+  try {
+    const { stories } = await api(url);
+    listEl.innerHTML = stories.length
+      ? stories.map(renderCoverCard).join("")
+      : `<p class="muted">No stories matched.</p>`;
+  } catch (e) {
+    listEl.innerHTML = `<p class="error-msg">Couldn't load stories: ${escapeHtml(e.message)}</p>`;
+  }
+}
 
-  // Tags panel
+// Wire controls immediately, before any data loads
+document.getElementById("search-btn").onclick = loadStoryList;
+document.getElementById("search").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); loadStoryList(); }
+});
+document.getElementById("sort-select").addEventListener("change", loadStoryList);
+document.getElementById("status-select").addEventListener("change", loadStoryList);
+document.getElementById("tags-toggle").onclick = () => {
+  document.getElementById("tags-panel").classList.toggle("open");
+};
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".tags-dropdown")) {
+    document.getElementById("tags-panel").classList.remove("open");
+  }
+});
+
+async function load() {
+  loadStoryList();
+
+  try {
+    const { stories } = await api("/api/stories?sort=updated");
+    document.getElementById("recent-list").innerHTML = stories.length
+      ? stories.slice(0, 3).map(renderCoverCard).join("")
+      : `<p class="muted">No stories yet.</p>`;
+  } catch (e) {
+    document.getElementById("recent-list").innerHTML = "";
+  }
+
   try {
     const { tags } = await api("/api/tags");
     document.getElementById("tags-panel").innerHTML = tags.length
@@ -62,6 +108,7 @@ async function load() {
     });
   } catch (e) {}
 
+  const user = await renderNav();
   if (user) {
     try {
       const { continue_reading } = await api("/api/library");
@@ -79,58 +126,8 @@ async function load() {
           </div>`;
       }
     } catch (e) {}
-
-    try {
-      const { stories, based_on } = await api("/api/recommendations");
-      if (stories.length) {
-        document.getElementById("recommend-section").innerHTML =
-          `<div class="section-title">🪄 Because you liked ${escapeHtml(based_on)}</div>
-           <div class="story-grid">${stories.map(renderCoverCard).join("")}</div>`;
-      }
-    } catch (e) {}
-  }
-
-  try {
-    const { stories } = await api("/api/stories?sort=updated");
-    document.getElementById("recent-list").innerHTML = stories.length
-      ? stories.slice(0, 3).map(renderCoverCard).join("")
-      : `<p class="muted">No stories yet.</p>`;
-  } catch (e) {}
-
-  loadStoryList();
-}
-
-async function loadStoryList() {
-  const sort = document.getElementById("sort-select").value;
-  const status = document.getElementById("status-select").value;
-  const q = document.getElementById("search").value.trim();
-  let url = `/api/stories?sort=${sort}`;
-  if (status) url += `&status=${status}`;
-  if (q) url += `&q=${encodeURIComponent(q)}`;
-  if (selectedTags.length) url += `&genre=${encodeURIComponent(selectedTags.join(","))}`;
-  try {
-    const { stories } = await api(url);
-    document.getElementById("story-list").innerHTML = stories.length
-      ? stories.map(renderCoverCard).join("")
-      : `<p class="muted">No stories matched.</p>`;
-  } catch (e) {
-    document.getElementById("story-list").innerHTML = `<p class="error-msg">Couldn't load stories.</p>`;
   }
 }
-
-document.getElementById("tags-toggle").onclick = () => {
-  document.getElementById("tags-panel").classList.toggle("open");
-};
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".tags-dropdown")) {
-    document.getElementById("tags-panel").classList.remove("open");
-  }
-});
-document.getElementById("search").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") loadStoryList();
-});
-document.getElementById("sort-select").addEventListener("change", loadStoryList);
-document.getElementById("status-select").addEventListener("change", loadStoryList);
 
 load();
 </script>

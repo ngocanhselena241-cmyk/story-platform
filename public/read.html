@@ -38,7 +38,6 @@
   <label>Layout</label>
   <select id="layout-select">
     <option value="scroll-1">Single column · scroll</option>
-    <option value="scroll-2">Double column · scroll</option>
     <option value="paged-1">Single page · flip</option>
     <option value="paged-2">Double page · flip</option>
   </select>
@@ -98,25 +97,35 @@ function applySettings() {
   applyLayout();
 }
 
+let pageIndex = 0;
+const PAGE_GAP = 60;
+
 function applyLayout() {
-  const layout = settings.layout;
+  let layout = settings.layout;
+  if (layout === "scroll-2") { layout = "scroll-1"; settings.layout = "scroll-1"; } // removed mode
   const reader = document.querySelector(".reader-text");
   if (!reader) return;
   const body = reader.querySelector(".reader-body");
   const nav = document.getElementById("page-nav");
   reader.classList.remove("reader-paged");
-  if (body) { body.classList.remove("pages", "reader-cols-2"); body.style.height = ""; }
+  if (body) {
+    body.classList.remove("pages");
+    body.style.height = ""; body.style.columnWidth = ""; body.style.columnGap = "";
+    body.style.scrollSnapType = "none";
+    body.scrollLeft = 0;
+  }
   if (nav) nav.style.display = "none";
+  pageIndex = 0;
 
   if (!body) return;
-  if (layout === "scroll-2") {
-    body.classList.add("reader-cols-2");
-  } else if (layout.startsWith("paged")) {
+  if (layout.startsWith("paged")) {
     reader.classList.add("reader-paged");
     body.classList.add("pages");
-    const h = window.innerHeight - 220;
-    body.style.height = h + "px";
-    body.style.columnWidth = (layout === "paged-2" ? (body.clientWidth / 2 - 20) : body.clientWidth) + "px";
+    body.style.height = (window.innerHeight - 230) + "px";
+    body.style.columnGap = PAGE_GAP + "px";
+    // Force layout so clientWidth is accurate, then size columns to exactly fill one page
+    const w = body.clientWidth;
+    body.style.columnWidth = (layout === "paged-2" ? (w - PAGE_GAP) / 2 : w) + "px";
     if (nav) nav.style.display = "flex";
   }
 }
@@ -124,7 +133,10 @@ function applyLayout() {
 function pageFlip(dir) {
   const body = document.querySelector(".reader-body");
   if (!body) return;
-  body.scrollBy({ left: dir * body.clientWidth, behavior: "smooth" });
+  const step = body.clientWidth + PAGE_GAP;
+  const maxPage = Math.max(0, Math.ceil(body.scrollWidth / step) - 1);
+  pageIndex = Math.min(maxPage, Math.max(0, pageIndex + dir));
+  body.scrollTo({ left: pageIndex * step, behavior: "smooth" });
 }
 
 document.getElementById("font-size-slider").oninput = (e) => { settings.fontSize = e.target.value; applySettings(); };
@@ -275,20 +287,45 @@ function canDelete(c) {
   return currentUser && (currentUser.role === "admin" || currentUser.username === c.username);
 }
 
-function commentHtml(c) {
+function commentHtml(c, isReply) {
   const avatar = c.avatar
     ? `<img class="comment-avatar" src="${c.avatar}">`
     : `<div class="comment-avatar">${escapeHtml(c.username[0].toUpperCase())}</div>`;
-  return `<div class="comment">
+  return `<div class="comment" style="${isReply === true ? "margin-left:42px;" : ""}">
     ${avatar}
     <div style="flex:1;">
       <div class="who"><a href="/user.html?name=${encodeURIComponent(c.username)}">${escapeHtml(c.username)}</a>${c.display_badge ? `<span class="comment-badge">${c.display_badge}</span>` : ""}
         <span class="when">${timeAgo(c.created_at)}</span>
-        ${canDelete(c) ? `<button class="small danger comment-del-btn" data-id="${c.id}" style="margin-left:8px;padding:1px 7px;font-size:0.7rem;">🗑</button>` : ""}
+        ${currentUser && !isReply ? `<button class="small secondary reply-btn" data-id="${c.id}" style="margin-left:8px;padding:1px 7px;font-size:0.7rem;">Reply</button>` : ""}
+        ${canDelete(c) ? `<button class="small danger comment-del-btn" data-id="${c.id}" style="margin-left:6px;padding:1px 7px;font-size:0.7rem;">🗑</button>` : ""}
       </div>
       <div>${escapeHtml(c.content)}</div>
+      <div class="reply-box" data-parent="${c.id}" style="display:none;margin-top:6px;">
+        <textarea rows="2" placeholder="Write a reply..."></textarea>
+        <button class="small reply-submit" data-parent="${c.id}" style="margin-top:4px;">Post reply</button>
+      </div>
     </div>
   </div>`;
+}
+
+function wireReplies(container) {
+  container.querySelectorAll(".reply-btn").forEach(btn => {
+    btn.onclick = () => {
+      const box = container.querySelector(`.reply-box[data-parent="${btn.dataset.id}"]`);
+      if (box) box.style.display = box.style.display === "none" ? "block" : "none";
+    };
+  });
+  container.querySelectorAll(".reply-submit").forEach(btn => {
+    btn.onclick = async () => {
+      const box = btn.closest(".reply-box");
+      const content = box.querySelector("textarea").value.trim();
+      if (!content) return;
+      await api("/api/comment", { method: "POST", body: JSON.stringify({
+        chapter_id: chapterId, content, parent_id: Number(btn.dataset.parent)
+      })});
+      loadComments();
+    };
+  });
 }
 
 function wireCommentDeletes(container) {
@@ -305,12 +342,17 @@ async function loadComments() {
   const { comments } = await api(`/api/comments?chapter=${chapterId}`);
   allComments = comments;
 
-  const general = comments.filter(c => c.paragraph_index === null || c.paragraph_index === undefined);
+  const general = comments.filter(c => (c.paragraph_index === null || c.paragraph_index === undefined));
+  const parents = general.filter(c => !c.parent_id);
   const commentsEl = document.getElementById("comments");
-  commentsEl.innerHTML = general.length
-    ? general.map(commentHtml).join("")
+  commentsEl.innerHTML = parents.length
+    ? parents.map(p => {
+        const replies = general.filter(c => c.parent_id === p.id);
+        return commentHtml(p, false) + replies.map(r => commentHtml(r, true)).join("");
+      }).join("")
     : `<p class="muted">No comments yet.</p>`;
   wireCommentDeletes(commentsEl);
+  wireReplies(commentsEl);
 
   document.querySelectorAll(".para-count").forEach(span => {
     const n = comments.filter(c => c.paragraph_index === Number(span.dataset.para)).length;
@@ -324,7 +366,7 @@ function toggleParaPanel(paraIndex) {
 
   const paraComments = allComments.filter(c => c.paragraph_index === paraIndex);
   let html = paraComments.length
-    ? paraComments.map(commentHtml).join("")
+    ? paraComments.map(c => commentHtml(c, "flat")).join("")
     : `<p class="muted">No comments on this paragraph yet.</p>`;
 
   if (currentUser) {

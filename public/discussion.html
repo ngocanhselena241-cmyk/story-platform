@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discussion — Nayedaba</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="container" style="padding-top:24px;">
+  <h1>Discussion</h1>
+
+  <div id="composer-wrap"></div>
+
+  <div style="display:flex;gap:8px;margin:18px 0 8px;">
+    <button class="secondary small cat-filter" data-cat="">All</button>
+    <button class="secondary small cat-filter" data-cat="general">General</button>
+    <button class="secondary small cat-filter" data-cat="stories">Stories</button>
+  </div>
+  <div id="thread-list"><p class="muted">Loading...</p></div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+let imageData = null;
+const EMOTES = ["😀","😂","😭","❤️","🔥","👍","👀","😱","💀","✨","🥰","🤔"];
+
+async function load() {
+  const user = await renderNav();
+
+  if (user) {
+    document.getElementById("composer-wrap").innerHTML = `
+      <div class="card">
+        <label>Title</label>
+        <input id="t-title" placeholder="What do you want to talk about?">
+        <label>Category</label>
+        <div style="display:flex;gap:8px;">
+          <button class="secondary small cat-pick" data-cat="general" style="background:var(--accent);color:#fff;">General</button>
+          <button class="secondary small cat-pick" data-cat="stories">Stories</button>
+        </div>
+        <label>Content</label>
+        <div style="margin-bottom:6px;">${EMOTES.map(e => `<button class="secondary small emote-btn" style="padding:2px 7px;">${e}</button>`).join(" ")}</div>
+        <textarea id="t-content" rows="5" placeholder="Write your post..."></textarea>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:8px;">
+          <button class="secondary small" id="t-image-btn">📷 Attach image</button>
+          <img id="t-image-preview" style="display:none;max-width:120px;border-radius:8px;">
+          <span style="flex:1;"></span>
+          <button id="t-post-btn">Post</button>
+        </div>
+        <div id="t-msg" class="error-msg"></div>
+      </div>`;
+
+    let category = "general";
+    document.querySelectorAll(".cat-pick").forEach(btn => {
+      btn.onclick = () => {
+        category = btn.dataset.cat;
+        document.querySelectorAll(".cat-pick").forEach(b => { b.style.background = ""; b.style.color = ""; });
+        btn.style.background = "var(--accent)"; btn.style.color = "#fff";
+      };
+    });
+    document.querySelectorAll(".emote-btn").forEach(btn => {
+      btn.onclick = () => {
+        const ta = document.getElementById("t-content");
+        ta.value += btn.textContent;
+        ta.focus();
+      };
+    });
+    document.getElementById("t-image-btn").onclick = () => {
+      pickAndResizeImage(600, (dataUrl) => {
+        imageData = dataUrl;
+        const prev = document.getElementById("t-image-preview");
+        prev.src = dataUrl; prev.style.display = "block";
+      });
+    };
+    document.getElementById("t-post-btn").onclick = async () => {
+      const msg = document.getElementById("t-msg");
+      try {
+        const res = await api("/api/threads", { method: "POST", body: JSON.stringify({
+          title: document.getElementById("t-title").value,
+          category,
+          content: document.getElementById("t-content").value,
+          image: imageData
+        })});
+        window.location.href = `/thread.html?id=${res.id}`;
+      } catch (e) {
+        msg.textContent = e.message;
+      }
+    };
+  } else {
+    document.getElementById("composer-wrap").innerHTML =
+      `<p class="muted"><a href="/login.html">Log in</a> to start a discussion — reading is open to everyone.</p>`;
+  }
+
+  loadThreads("");
+  document.querySelectorAll(".cat-filter").forEach(btn => {
+    btn.onclick = () => loadThreads(btn.dataset.cat);
+  });
+}
+
+async function loadThreads(cat) {
+  const { threads } = await api(`/api/threads${cat ? `?category=${cat}` : ""}`);
+  document.getElementById("thread-list").innerHTML = threads.length
+    ? threads.map(t => {
+        const avatar = t.avatar
+          ? `<img class="comment-avatar" src="${t.avatar}">`
+          : `<div class="comment-avatar">${escapeHtml(t.username[0].toUpperCase())}</div>`;
+        return `<a class="card" style="display:flex;gap:12px;align-items:center;" href="/thread.html?id=${t.id}">
+          ${avatar}
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;">${escapeHtml(t.title)}</div>
+            <div class="muted" style="font-size:0.8rem;">${escapeHtml(t.username)} · ${t.category} · ${timeAgo(t.created_at)}</div>
+          </div>
+          <span class="muted" style="font-size:0.85rem;white-space:nowrap;">👍 ${t.likes} · 👎 ${t.dislikes} · 💬 ${t.comment_count}</span>
+        </a>`;
+      }).join("")
+    : `<p class="muted">No posts yet — be the first!</p>`;
+}
+
+load();
+</script>
+</body>
+</html>

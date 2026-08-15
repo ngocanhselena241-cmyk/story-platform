@@ -10,10 +10,28 @@ export async function onRequestPost({ request, env }) {
     return badRequest("chapter_id and content are required.");
   }
 
+  const now = Date.now();
+  const parentId = Number.isInteger(body.parent_id) ? body.parent_id : null;
+
   const result = await env.DB.prepare(
-    "INSERT INTO comments (chapter_id, user_id, content, paragraph_index, created_at) VALUES (?, ?, ?, ?, ?)"
+    "INSERT INTO comments (chapter_id, user_id, content, paragraph_index, parent_id, created_at) VALUES (?, ?, ?, ?, ?, ?)"
   ).bind(body.chapter_id, user.id, body.content.trim(),
-    Number.isInteger(body.paragraph_index) ? body.paragraph_index : null, Date.now()).run();
+    Number.isInteger(body.paragraph_index) ? body.paragraph_index : null, parentId, now).run();
+
+  // Notify the person being replied to
+  if (parentId) {
+    const parent = await env.DB.prepare("SELECT user_id FROM comments WHERE id = ?").bind(parentId).first();
+    if (parent && parent.user_id !== user.id) {
+      const ctx = await env.DB.prepare(
+        `SELECT s.id AS story_id, s.title, ch.chapter_number
+         FROM chapters ch JOIN stories s ON s.id = ch.story_id WHERE ch.id = ?`
+      ).bind(body.chapter_id).first();
+      await env.DB.prepare(
+        "INSERT INTO notifications (user_id, story_id, chapter_number, message, created_at) VALUES (?, ?, ?, ?, ?)"
+      ).bind(parent.user_id, ctx ? ctx.story_id : null, ctx ? ctx.chapter_number : null,
+        `${user.username} replied to your comment${ctx ? ` on ${ctx.title} Ch. ${ctx.chapter_number}` : ""}`, now).run();
+    }
+  }
 
   return json({ id: result.meta.last_row_id });
 }

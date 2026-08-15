@@ -35,7 +35,7 @@ async function renderNav() {
     try { ({ profile } = await api("/api/profile")); } catch (e) {}
   }
 
-  const mainLinks = [`<a href="/index.html">Home</a>`, `<a href="/top.html">Top</a>`];
+  const mainLinks = [`<a href="/index.html">Home</a>`, `<a href="/discussion.html">Discussion</a>`, `<a href="/top.html">Top</a>`];
   if (user) mainLinks.push(`<a href="/report.html">Report</a>`);
   if (user && (user.role === "uploader" || user.role === "admin")) mainLinks.push(`<a href="/upload.html">Upload</a>`);
   if (user && user.role === "admin") mainLinks.push(`<a href="/admin.html">Admin</a>`);

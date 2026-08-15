@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discussion — Nayedaba</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="container" style="padding-top:24px;max-width:700px;">
+  <a href="/discussion.html" class="muted">← Back to discussion</a>
+  <div id="content"><p class="muted">Loading...</p></div>
+  <div class="section-title">Comments</div>
+  <div id="comment-form"></div>
+  <div id="comments"></div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const threadId = new URLSearchParams(location.search).get("id");
+let currentUser = null;
+
+async function load() {
+  currentUser = await renderNav();
+  try {
+    const { thread, comments, my_vote } = await api(`/api/thread?id=${threadId}`);
+    const avatar = thread.avatar
+      ? `<img class="comment-avatar" src="${thread.avatar}">`
+      : `<div class="comment-avatar">${escapeHtml(thread.username[0].toUpperCase())}</div>`;
+
+    document.getElementById("content").innerHTML = `
+      <h1 style="margin-bottom:6px;">${escapeHtml(thread.title)}</h1>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        ${avatar}
+        <span><a href="/user.html?name=${encodeURIComponent(thread.username)}">${escapeHtml(thread.username)}</a>
+        <span class="muted" style="font-size:0.8rem;"> · ${thread.category} · ${timeAgo(thread.created_at)}</span></span>
+      </div>
+      <div style="white-space:pre-wrap;">${escapeHtml(thread.content)}</div>
+      ${thread.image ? `<img src="${thread.image}" style="max-width:100%;border-radius:10px;margin-top:12px;">` : ""}
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        <button class="secondary" id="like-btn" style="${my_vote === 1 ? "background:var(--accent);color:#fff;" : ""}">👍 <span id="like-count">${thread.likes}</span></button>
+        <button class="secondary" id="dislike-btn" style="${my_vote === -1 ? "background:var(--danger);color:#fff;" : ""}">👎 <span id="dislike-count">${thread.dislikes}</span></button>
+      </div>
+    `;
+
+    const vote = async (v) => {
+      if (!currentUser) { window.location.href = "/login.html"; return; }
+      const res = await api("/api/thread-vote", { method: "POST", body: JSON.stringify({ thread_id: threadId, vote: v }) });
+      document.getElementById("like-count").textContent = res.likes;
+      document.getElementById("dislike-count").textContent = res.dislikes;
+    };
+    document.getElementById("like-btn").onclick = () => vote(1);
+    document.getElementById("dislike-btn").onclick = () => vote(-1);
+
+    renderComments(comments);
+
+    if (currentUser) {
+      document.getElementById("comment-form").innerHTML = `
+        <textarea id="c-input" rows="3" placeholder="Write a comment..."></textarea>
+        <button id="c-btn" style="margin-top:8px;">Post comment</button>`;
+      document.getElementById("c-btn").onclick = async () => {
+        const content = document.getElementById("c-input").value.trim();
+        if (!content) return;
+        await api("/api/thread", { method: "POST", body: JSON.stringify({ thread_id: threadId, content }) });
+        document.getElementById("c-input").value = "";
+        const { comments } = await api(`/api/thread?id=${threadId}`);
+        renderComments(comments);
+      };
+    } else {
+      document.getElementById("comment-form").innerHTML = `<p class="muted"><a href="/login.html">Log in</a> to comment.</p>`;
+    }
+  } catch (e) {
+    document.getElementById("content").innerHTML = `<p class="error-msg">Couldn't load this post.</p>`;
+  }
+}
+
+function renderComments(comments) {
+  document.getElementById("comments").innerHTML = comments.length
+    ? comments.map(c => {
+        const avatar = c.avatar
+          ? `<img class="comment-avatar" src="${c.avatar}">`
+          : `<div class="comment-avatar">${escapeHtml(c.username[0].toUpperCase())}</div>`;
+        return `<div class="comment">
+          ${avatar}
+          <div style="flex:1;">
+            <div class="who"><a href="/user.html?name=${encodeURIComponent(c.username)}">${escapeHtml(c.username)}</a>${c.display_badge ? `<span class="comment-badge">${c.display_badge}</span>` : ""}
+              <span class="when">${timeAgo(c.created_at)}</span></div>
+            <div>${escapeHtml(c.content)}</div>
+          </div>
+        </div>`;
+      }).join("")
+    : `<p class="muted">No comments yet.</p>`;
+}
+
+load();
+</script>
+</body>
+</html>

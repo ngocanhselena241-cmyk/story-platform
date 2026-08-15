@@ -473,4 +473,19 @@ label { display: block; margin: 14px 0 6px; font-size: 0.9rem; color: var(--text
 }
 .reader-paged .pages::-webkit-scrollbar { display: none; }
 .page-nav-btns { display: flex; justify-content: space-between; margin-top: 12px; }
+
+/* Page-turn tap zones: only on touch screens, only in paged mode. A mouse
+   has the arrow keys and the buttons instead. */
+.reader-stage { position: relative; }
+.tap-zone { display: none; }
+@media (hover: none) {
+  .reader-paged .tap-zone {
+    display: block; position: absolute; top: 0; bottom: 0; width: 33%;
+    background: none; border: none; padding: 0; z-index: 6;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .reader-paged .tap-zone.left { left: 0; }
+  .reader-paged .tap-zone.right { right: 0; }
+  .reader-paged .page-nav-btns { display: none !important; }
+}
 .reader-cols-2 { column-count: 2; column-gap: 40px; }

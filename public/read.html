@@ -155,11 +155,21 @@ document.getElementById("line-height-slider").oninput = (e) => { settings.lineHe
 document.getElementById("font-select").onchange = (e) => { settings.font = e.target.value; applySettings(); };
 document.getElementById("layout-select").onchange = (e) => { settings.layout = e.target.value; applySettings(); };
 window.addEventListener("resize", applyLayout);
+// Desktop: the arrow keys turn pages, unless you're typing somewhere.
 document.addEventListener("keydown", (e) => {
-  if (settings.layout.startsWith("paged")) {
-    if (e.key === "ArrowRight") pageFlip(1);
-    if (e.key === "ArrowLeft") pageFlip(-1);
-  }
+  const el = e.target;
+  if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return;
+  if (!settings.layout.startsWith("paged")) return;
+  if (e.key === "ArrowRight") { e.preventDefault(); pageFlip(1); }
+  if (e.key === "ArrowLeft") { e.preventDefault(); pageFlip(-1); }
+});
+
+// Touch: the right edge of the page goes forward, the left edge goes back.
+// The zones only exist in paged mode on hover-less screens (see the CSS).
+document.addEventListener("click", (e) => {
+  const zone = e.target.closest && e.target.closest(".tap-zone");
+  if (!zone) return;
+  pageFlip(zone.classList.contains("right") ? 1 : -1);
 });
 
 // ---- Drawer ----
@@ -207,7 +217,11 @@ async function load() {
     document.getElementById("content").innerHTML = `
       <div class="reader-text" style="font-family:var(--reader-font, Georgia, serif);">
         <h1>Chapter ${chapter.chapter_number}${chapter.title ? ": " + escapeHtml(chapter.title) : ""}</h1>
-        <div class="reader-body">${paraHtml}</div>
+        <div class="reader-stage">
+          <div class="reader-body">${paraHtml}</div>
+          <button type="button" class="tap-zone left" aria-label="Previous page"></button>
+          <button type="button" class="tap-zone right" aria-label="Next page"></button>
+        </div>
         <div id="page-nav" class="page-nav-btns" style="display:none;">
           <button class="secondary" onclick="pageFlip(-1)">${icon("arrowLeft")} Page</button>
           <button class="secondary" onclick="pageFlip(1)">Page ${icon("arrowRight")}</button>

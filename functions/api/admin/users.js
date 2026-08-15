@@ -41,7 +41,8 @@ export async function onRequestDelete({ request, env }) {
   await env.DB.prepare("DELETE FROM ratings WHERE user_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM reading_progress WHERE user_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM reading_log WHERE user_id = ?").bind(id).run();
-  await env.DB.prepare("DELETE FROM library WHERE user_id = ?").bind(id).run();
+  await env.DB.prepare("DELETE FROM library_items WHERE library_id IN (SELECT id FROM libraries WHERE user_id = ?)").bind(id).run();
+  await env.DB.prepare("DELETE FROM libraries WHERE user_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM quotes WHERE user_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM chapter_moods WHERE user_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM follows WHERE user_id = ?").bind(id).run();

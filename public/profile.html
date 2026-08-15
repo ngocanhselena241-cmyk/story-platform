@@ -25,6 +25,15 @@ async function load() {
   let badges = [];
   try { ({ achievements: badges } = await api("/api/stats")); } catch (e) {}
 
+  let libraryLine = "See and edit everything you've collected.";
+  try {
+    const { libraries } = await api("/api/libraries");
+    const stories = libraries.reduce((sum, lb) => sum + lb.story_count, 0);
+    libraryLine = libraries.length
+      ? `${libraries.length} librar${libraries.length === 1 ? "y" : "ies"} · ${stories} stor${stories === 1 ? "y" : "ies"}`
+      : "No libraries yet — create your first one.";
+  } catch (e) {}
+
   content.innerHTML = `
     <h1>Your profile</h1>
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
@@ -49,6 +58,12 @@ async function load() {
 
     <button id="save-btn" style="margin-top:12px;">Save profile</button>
     <div id="msg" class="error-msg"></div>
+
+    <div class="section-title">Your libraries</div>
+    <div class="card">
+      <div class="muted" style="font-size:0.9rem;margin-bottom:10px;">${libraryLine}</div>
+      <a class="btn small" href="/library.html">${icon("library")} Open my library</a>
+    </div>
 
     <div class="section-title">Badges</div>
     <div style="display:flex;flex-wrap:wrap;gap:10px;">

@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Top — Nayedaba</title>
+<title>Ranking — Nayedaba</title>
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 <div id="nav"></div>
 <div class="container" style="padding-top:24px;">
-  <h1>Top</h1>
-  <div class="section-title">✍️ Top Uploaders</div>
+  <h1>Ranking</h1>
+  <div class="section-title" id="t-uploaders">Top Uploaders</div>
   <div id="uploaders"><p class="muted">Loading...</p></div>
-  <div class="section-title">📖 Top Readers</div>
+  <div class="section-title" id="t-readers">Top Readers</div>
   <div id="readers"><p class="muted">Loading...</p></div>
 </div>
 
@@ -30,10 +30,12 @@ function row(rank, u, statText) {
 }
 
 async function load() {
+  document.getElementById("t-uploaders").innerHTML = `${icon("quill")} Top Uploaders`;
+  document.getElementById("t-readers").innerHTML = `${icon("bookOpen")} Top Readers`;
   await renderNav();
   const { uploaders, readers } = await api("/api/leaderboard");
   document.getElementById("uploaders").innerHTML = uploaders.length
-    ? uploaders.map((u, i) => row(i + 1, u, `${u.story_count} stories · 👁 ${u.total_views}`)).join("")
+    ? uploaders.map((u, i) => row(i + 1, u, `${u.story_count} stories · <span class="meta-icon">${icon("eye")}${u.total_views}</span>`)).join("")
     : `<p class="muted">No uploaders yet.</p>`;
   document.getElementById("readers").innerHTML = readers.length
     ? readers.map((u, i) => row(i + 1, u, `${u.chapters_read} chapters read`)).join("")

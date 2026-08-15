@@ -14,14 +14,102 @@
 
 <script src="/js/app.js"></script>
 <script>
-const STATUS_LABELS = {
-  reading: "📖 Reading",
-  plan_to_read: "📋 Plan to Read",
-  completed: "✅ Completed",
-  on_hold: "⏸ On Hold",
-  dropped: "🗑 Dropped",
-  favourite: "⭐ Favourite"
-};
+let libraries = [];
+let items = [];
+
+async function refresh() {
+  const [libsRes, itemsRes] = await Promise.all([
+    api("/api/libraries"),
+    api("/api/library-items")
+  ]);
+  libraries = libsRes.libraries;
+  items = itemsRes.items;
+  render();
+}
+
+function render() {
+  const body = libraries.length
+    ? libraries.map(lb => {
+        const stories = items.filter(it => it.library_id === lb.id);
+        const list = stories.length
+          ? stories.map(it => `
+              <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                <a href="/story.html?id=${it.story_id}">${escapeHtml(it.title)}</a>
+                <button class="small secondary remove-btn" data-library="${lb.id}" data-story="${it.story_id}">${icon("close")} Remove</button>
+              </div>`).join("")
+          : `<p class="muted">No stories in here yet.</p>`;
+        return `
+          <div style="margin-bottom:24px;">
+            <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+              <span class="meta-icon">${icon("library")}${escapeHtml(lb.name)} <span class="muted" style="font-weight:400;font-size:0.85rem;">(${stories.length})</span></span>
+              <span>
+                <button class="small secondary rename-btn" data-id="${lb.id}">${icon("pencil")} Rename</button>
+                <button class="small danger delete-btn" data-id="${lb.id}">${icon("trash")} Delete</button>
+              </span>
+            </div>
+            ${list}
+          </div>`;
+      }).join("")
+    : `<p class="muted">You don't have any libraries yet — create one to start collecting stories.</p>`;
+
+  document.getElementById("content").innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+      <h1 style="margin:0;">My Library</h1>
+      <button id="new-lib-btn">${icon("plus")} Add a new library</button>
+    </div>
+    <div id="lib-msg" class="error-msg"></div>
+    <div style="margin-top:16px;">${body}</div>
+  `;
+  wire();
+}
+
+function showError(e) {
+  const msg = document.getElementById("lib-msg");
+  if (msg) msg.textContent = e.message;
+}
+
+function wire() {
+  document.getElementById("new-lib-btn").onclick = async () => {
+    const name = prompt("Name your new library:");
+    if (name === null || !name.trim()) return;
+    try {
+      await api("/api/libraries", { method: "POST", body: JSON.stringify({ name }) });
+      await refresh();
+    } catch (e) { showError(e); }
+  };
+
+  const nameOf = id => (libraries.find(lb => lb.id === Number(id)) || {}).name || "";
+
+  document.querySelectorAll(".rename-btn").forEach(btn => {
+    btn.onclick = async () => {
+      const name = prompt("New name for this library:", nameOf(btn.dataset.id));
+      if (name === null || !name.trim()) return;
+      try {
+        await api("/api/libraries", { method: "PUT", body: JSON.stringify({ id: Number(btn.dataset.id), name }) });
+        await refresh();
+      } catch (e) { showError(e); }
+    };
+  });
+
+  document.querySelectorAll(".delete-btn").forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm(`Delete the library "${nameOf(btn.dataset.id)}"? The stories themselves stay on the site.`)) return;
+      try {
+        await api(`/api/libraries?id=${btn.dataset.id}`, { method: "DELETE" });
+        await refresh();
+      } catch (e) { showError(e); }
+    };
+  });
+
+  document.querySelectorAll(".remove-btn").forEach(btn => {
+    btn.onclick = async () => {
+      try {
+        await api(`/api/library-items?library=${btn.dataset.library}&story=${btn.dataset.story}`, { method: "DELETE" });
+        await refresh();
+      } catch (e) { showError(e); }
+    };
+  });
+}
 
 async function load() {
   const user = await renderNav();
@@ -29,26 +117,7 @@ async function load() {
   if (!user) { content.innerHTML = `<p>You need to <a href="/login.html">log in</a> to see your library.</p>`; return; }
 
   try {
-    const { library } = await api("/api/library");
-    if (!library.length) {
-      content.innerHTML = `<h1>My Library</h1><p class="muted">Nothing here yet — add stories from their story page.</p>`;
-      return;
-    }
-    const groups = {};
-    library.forEach(item => {
-      groups[item.status] = groups[item.status] || [];
-      groups[item.status].push(item);
-    });
-
-    let html = `<h1>My Library</h1>`;
-    Object.keys(STATUS_LABELS).forEach(status => {
-      if (!groups[status]) return;
-      html += `<div class="section-title">${STATUS_LABELS[status]}</div>`;
-      html += groups[status].map(item =>
-        `<div class="card"><a href="/story.html?id=${item.story_id}">${escapeHtml(item.title)}</a></div>`
-      ).join("");
-    });
-    content.innerHTML = html;
+    await refresh();
   } catch (e) {
     content.innerHTML = `<p class="error-msg">Couldn't load your library.</p>`;
   }

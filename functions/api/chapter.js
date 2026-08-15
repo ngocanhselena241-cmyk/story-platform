@@ -21,8 +21,13 @@ export async function onRequestGet({ request, env }) {
     "SELECT chapter_number FROM chapters WHERE story_id = ? AND chapter_number > ? ORDER BY chapter_number ASC LIMIT 1"
   ).bind(storyId, num).first();
 
+  // A view is one chapter actually being opened — counted per chapter and on the story.
+  await env.DB.prepare("UPDATE chapters SET views = views + 1 WHERE id = ?").bind(chapter.id).run();
+  await env.DB.prepare("UPDATE stories SET views = views + 1 WHERE id = ?").bind(storyId).run();
+
   return json({
-    chapter, story,
+    chapter: { ...chapter, views: (chapter.views || 0) + 1 },
+    story,
     prev_chapter: prev ? prev.chapter_number : null,
     next_chapter: next ? next.chapter_number : null
   });

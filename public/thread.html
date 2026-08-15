@@ -9,7 +9,7 @@
 <body>
 <div id="nav"></div>
 <div class="container" style="padding-top:24px;max-width:700px;">
-  <a href="/discussion.html" class="muted">← Back to discussion</a>
+  <a href="/discussion.html" class="muted" id="back-link">Back to discussion</a>
   <div id="content"><p class="muted">Loading...</p></div>
   <div class="section-title">Comments</div>
   <div id="comment-form"></div>
@@ -22,6 +22,7 @@ const threadId = new URLSearchParams(location.search).get("id");
 let currentUser = null;
 
 async function load() {
+  document.getElementById("back-link").innerHTML = `${icon("arrowLeft")} Back to discussion`;
   currentUser = await renderNav();
   try {
     const { thread, comments, my_vote } = await api(`/api/thread?id=${threadId}`);
@@ -39,8 +40,8 @@ async function load() {
       <div style="white-space:pre-wrap;">${escapeHtml(thread.content)}</div>
       ${thread.image ? `<img src="${thread.image}" style="max-width:100%;border-radius:10px;margin-top:12px;">` : ""}
       <div style="display:flex;gap:10px;margin-top:14px;">
-        <button class="secondary" id="like-btn" style="${my_vote === 1 ? "background:var(--accent);color:#fff;" : ""}">👍 <span id="like-count">${thread.likes}</span></button>
-        <button class="secondary" id="dislike-btn" style="${my_vote === -1 ? "background:var(--danger);color:#fff;" : ""}">👎 <span id="dislike-count">${thread.dislikes}</span></button>
+        <button class="secondary" id="like-btn" style="${my_vote === 1 ? "background:var(--accent);color:#fff;" : ""}">${icon("thumbUp")} <span id="like-count">${thread.likes}</span></button>
+        <button class="secondary" id="dislike-btn" style="${my_vote === -1 ? "background:var(--danger);color:#fff;" : ""}">${icon("thumbDown")} <span id="dislike-count">${thread.dislikes}</span></button>
       </div>
     `;
 

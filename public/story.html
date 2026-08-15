@@ -9,7 +9,7 @@
 <body>
 <div id="nav"></div>
 <div class="container" style="padding-top:24px;">
-  <a href="/index.html" class="muted">← Back to all stories</a>
+  <a href="/index.html" class="muted" id="back-link">Back to all stories</a>
   <div id="content"><p class="muted">Loading...</p></div>
 </div>
 
@@ -19,7 +19,70 @@ const params = new URLSearchParams(location.search);
 const storyId = params.get("id");
 let currentUser = null;
 
+// Tick-list of the reader's own libraries — a story can sit in as many as they like.
+async function setupLibraryPicker() {
+  const list = document.getElementById("library-list");
+  const msg = document.getElementById("lib-msg");
+
+  const renderList = (libraries) => {
+    list.className = libraries.length ? "" : "muted";
+    list.innerHTML = libraries.length
+      ? libraries.map(lb => `
+          <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin:4px 0;">
+            <input type="checkbox" class="lib-check" value="${lb.id}" ${lb.has_story ? "checked" : ""}
+                   style="width:auto;margin:0;">
+            <span>${escapeHtml(lb.name)}</span>
+            <span class="muted" style="font-size:0.8rem;">(${lb.story_count})</span>
+          </label>`).join("")
+      : "You don't have any libraries yet — create one below.";
+  };
+
+  const reload = async () => {
+    const { libraries } = await api(`/api/libraries?story=${storyId}`);
+    renderList(libraries);
+  };
+
+  try {
+    await reload();
+  } catch (e) {
+    list.textContent = "Couldn't load your libraries.";
+    return;
+  }
+
+  document.getElementById("new-lib-btn").onclick = async () => {
+    const name = prompt("Name your new library:");
+    if (name === null || !name.trim()) return;
+    msg.textContent = "";
+    try {
+      // Keep whatever is already ticked, and tick the new library too.
+      const checked = [...document.querySelectorAll(".lib-check:checked")].map(c => Number(c.value));
+      const { library } = await api("/api/libraries", { method: "POST", body: JSON.stringify({ name }) });
+      await reload();
+      document.querySelectorAll(".lib-check").forEach(c => {
+        c.checked = checked.includes(Number(c.value)) || Number(c.value) === library.id;
+      });
+    } catch (e) {
+      msg.className = "error-msg";
+      msg.textContent = e.message;
+    }
+  };
+
+  document.getElementById("apply-lib-btn").onclick = async () => {
+    const libraryIds = [...document.querySelectorAll(".lib-check:checked")].map(c => Number(c.value));
+    try {
+      await api("/api/library-items", { method: "POST", body: JSON.stringify({ story_id: Number(storyId), library_ids: libraryIds }) });
+      await reload();
+      msg.className = "success-msg";
+      msg.textContent = libraryIds.length ? "Saved to your library!" : "Removed from your libraries.";
+    } catch (e) {
+      msg.className = "error-msg";
+      msg.textContent = e.message;
+    }
+  };
+}
+
 async function load() {
+  document.getElementById("back-link").innerHTML = `${icon("arrowLeft")} Back to all stories`;
   currentUser = await renderNav();
   try {
     const { story, chapters } = await api(`/api/story?id=${storyId}`);
@@ -30,9 +93,13 @@ async function load() {
     const chapterList = chapters.length
       ? chapters.map(c => `<div class="card" style="display:flex;justify-content:space-between;align-items:center;">
           <a href="/read.html?story=${storyId}&chapter=${c.chapter_number}">Chapter ${c.chapter_number}${c.title ? ": " + escapeHtml(c.title) : ""}</a>
-          <span>
-            <span class="muted" style="font-size:0.8rem;">${timeAgo(c.created_at)}</span>
-            ${isAdmin ? `<button class="small danger chap-del-btn" data-id="${c.id}" style="margin-left:8px;">🗑</button>` : ""}
+          <span style="display:flex;align-items:center;gap:12px;">
+            <span class="muted" style="font-size:0.8rem;display:flex;align-items:center;gap:12px;">
+              <span class="meta-icon" title="Views">${icon("eye")}${c.views || 0}</span>
+              <span class="meta-icon" title="Comments">${icon("comment")}${c.comment_count || 0}</span>
+              <span>${timeAgo(c.created_at)}</span>
+            </span>
+            ${isAdmin ? `<button class="small danger chap-del-btn" data-id="${c.id}" style="margin-left:8px;" title="Delete chapter">${icon("trash")}</button>` : ""}
           </span>
         </div>`).join("")
       : `<p class="muted">No chapters yet.</p>`;
@@ -42,24 +109,21 @@ async function load() {
         ${story.cover ? `<img src="${story.cover}" style="width:160px;border-radius:10px;">` : ""}
         <div style="flex:1;min-width:240px;">
           <h1 style="margin-top:0;">${escapeHtml(story.title)} <span id="edit-slot"></span></h1>
-          <div class="story-meta">by ${escapeHtml(story.author_name)} · ${story.status} · ⭐ ${rating} (${story.rating_count} ratings) · 👁 ${story.views}</div>
+          <div class="story-meta">by ${escapeHtml(story.author_name)} · ${story.status} · <span class="meta-icon">${icon("star")}${rating}</span> (${story.rating_count} ratings) · <span class="meta-icon">${icon("eye")}${story.views}</span></div>
           <div style="margin:10px 0;">${genres}</div>
           <p>${escapeHtml(story.description)}</p>
         </div>
       </div>
       ${chapters.length ? `<a class="btn" href="/read.html?story=${storyId}&chapter=${chapters[0].chapter_number}">Start Reading</a>` : ""}
-      ${currentUser ? `<button class="secondary" id="follow-btn" style="margin-left:8px;">🔔 Follow</button>` : ""}
+      ${currentUser ? `<button class="secondary" id="follow-btn" style="margin-left:8px;"></button>` : ""}
       ${currentUser ? `<div id="library-box" style="margin-top:16px;">
         <label>Add to your library</label>
-        <select id="library-status">
-          <option value="">— Choose —</option>
-          <option value="reading">Reading</option>
-          <option value="plan_to_read">Plan to Read</option>
-          <option value="completed">Completed</option>
-          <option value="on_hold">On Hold</option>
-          <option value="dropped">Dropped</option>
-          <option value="favourite">Favourite</option>
-        </select>
+        <div id="library-list" class="muted">Loading your libraries...</div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <button class="small secondary" id="new-lib-btn">${icon("plus")} Add a new library</button>
+          <button class="small" id="apply-lib-btn">Apply</button>
+          <span id="lib-msg" class="muted" style="font-size:0.85rem;"></span>
+        </div>
       </div>` : ""}
       ${currentUser ? `<div id="rate-box" style="margin-top:16px;">
         <label>Rate this story (1-10)</label>
@@ -96,24 +160,15 @@ async function load() {
       };
     }
 
-    const libSelect = document.getElementById("library-status");
-    if (libSelect) {
-      try {
-        const { library } = await api("/api/library");
-        const mine = library.find(l => String(l.story_id) === String(storyId));
-        if (mine) libSelect.value = mine.status;
-      } catch (e) {}
-      libSelect.onchange = async () => {
-        if (!libSelect.value) return;
-        await api("/api/library", { method: "POST", body: JSON.stringify({ story_id: storyId, status: libSelect.value }) });
-      };
-    }
+    if (document.getElementById("library-box")) await setupLibraryPicker();
 
     const followBtn = document.getElementById("follow-btn");
     if (followBtn) {
       const refresh = async () => {
         const { following, count } = await api(`/api/follow?story=${storyId}`);
-        followBtn.textContent = following ? `🔕 Following (${count})` : `🔔 Follow (${count})`;
+        followBtn.innerHTML = following
+          ? `${icon("bellOff")} Following (${count})`
+          : `${icon("bell")} Follow (${count})`;
         followBtn.dataset.following = following;
       };
       await refresh();
@@ -128,13 +183,13 @@ async function load() {
         const { stories: mine } = await api("/api/my-stories");
         if (mine.some(s => String(s.id) === String(storyId))) {
           document.getElementById("edit-slot").innerHTML =
-            `<a class="btn secondary small" href="/upload.html?story=${storyId}">✏️ Edit</a>`;
+            `<a class="btn secondary small" href="/upload.html?story=${storyId}">${icon("pencil")} Edit</a>`;
         }
       } catch (e) {}
 
       if (currentUser.role === "admin") {
         document.getElementById("edit-slot").innerHTML +=
-          ` <button class="danger small" id="admin-del-story">🗑 Delete story</button>`;
+          ` <button class="danger small" id="admin-del-story">${icon("trash")} Delete story</button>`;
         document.getElementById("admin-del-story").onclick = async () => {
           if (!confirm("Permanently delete this story, all its chapters, and comments?")) return;
           await api(`/api/admin/story?id=${storyId}`, { method: "DELETE" });

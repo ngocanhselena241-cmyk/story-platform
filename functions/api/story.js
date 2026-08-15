@@ -14,12 +14,12 @@ export async function onRequestGet({ request, env }) {
   ).bind(id).first();
   if (!story) return json({ error: "Story not found." }, 404);
 
+  // Views are counted in /api/chapter — opening a story page is not a read.
   const { results: chapters } = await env.DB.prepare(
-    "SELECT id, chapter_number, title, created_at FROM chapters WHERE story_id = ? ORDER BY chapter_number ASC"
+    `SELECT c.id, c.chapter_number, c.title, c.created_at, c.views,
+            (SELECT COUNT(*) FROM comments cm WHERE cm.chapter_id = c.id) AS comment_count
+     FROM chapters c WHERE c.story_id = ? ORDER BY c.chapter_number ASC`
   ).bind(id).all();
-
-  // increment view count (best-effort, ignore errors)
-  await env.DB.prepare("UPDATE stories SET views = views + 1 WHERE id = ?").bind(id).run();
 
   return json({ story, chapters });
 }

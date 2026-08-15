@@ -43,7 +43,7 @@ async function load() {
         <div style="margin-bottom:6px;">${EMOTES.map(e => `<button class="secondary small emote-btn" style="padding:2px 7px;">${e}</button>`).join(" ")}</div>
         <textarea id="t-content" rows="5" placeholder="Write your post..."></textarea>
         <div style="display:flex;align-items:center;gap:12px;margin-top:8px;">
-          <button class="secondary small" id="t-image-btn">📷 Attach image</button>
+          <button class="secondary small" id="t-image-btn">${icon("image")} Attach image</button>
           <img id="t-image-preview" style="display:none;max-width:120px;border-radius:8px;">
           <span style="flex:1;"></span>
           <button id="t-post-btn">Post</button>
@@ -111,7 +111,7 @@ async function loadThreads(cat) {
             <div style="font-weight:600;">${escapeHtml(t.title)}</div>
             <div class="muted" style="font-size:0.8rem;">${escapeHtml(t.username)} · ${t.category} · ${timeAgo(t.created_at)}</div>
           </div>
-          <span class="muted" style="font-size:0.85rem;white-space:nowrap;">👍 ${t.likes} · 👎 ${t.dislikes} · 💬 ${t.comment_count}</span>
+          <span class="muted" style="font-size:0.85rem;white-space:nowrap;"><span class="meta-icon">${icon("thumbUp")}${t.likes}</span> · <span class="meta-icon">${icon("thumbDown")}${t.dislikes}</span> · <span class="meta-icon">${icon("comment")}${t.comment_count}</span></span>
         </a>`;
       }).join("")
     : `<p class="muted">No posts yet — be the first!</p>`;

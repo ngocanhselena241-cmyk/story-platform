@@ -24,7 +24,7 @@ async function load() {
     content.innerHTML = `
       <h1>My Reading Stats</h1>
       <div class="card">
-        <div style="font-size:2rem;">🔥 ${stats.streak}</div>
+        <div style="font-size:2rem;" class="meta-icon">${icon("flame")}${stats.streak}</div>
         <div class="muted">day reading streak</div>
       </div>
       <div class="card">

@@ -13,7 +13,7 @@
   <div class="inner">
     <a class="brand" href="/index.html">Nayedaba</a>
     <a class="story-name" id="bar-story" href="#"></a>
-    <button class="secondary small" id="drawer-toggle">☰</button>
+    <button class="secondary small" id="drawer-toggle" title="Menu"></button>
   </div>
 </div>
 <div style="height:58px;"></div>
@@ -152,6 +152,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 // ---- Drawer ----
+document.getElementById("drawer-toggle").innerHTML = icon("menu", "icon-lg");
 const drawer = document.getElementById("reader-drawer");
 const overlay = document.getElementById("drawer-overlay");
 document.getElementById("drawer-toggle").onclick = () => {
@@ -188,7 +189,7 @@ async function load() {
     const paragraphs = chapter.content.split(/\n+/).filter(p => p.trim());
     const paraHtml = paragraphs.map((p, i) => `
       <div class="para-wrap" data-para="${i}">
-        <p>${escapeHtml(p)}<button class="para-comment-btn" data-para="${i}" title="Comments on this paragraph">💬<span class="para-count" data-para="${i}"></span></button></p>
+        <p>${escapeHtml(p)}<button class="para-comment-btn" data-para="${i}" title="Comments on this paragraph">${icon("comment")}<span class="para-count" data-para="${i}"></span></button></p>
         <div class="para-comment-panel" data-para="${i}" style="display:none;"></div>
       </div>`).join("");
 
@@ -197,12 +198,12 @@ async function load() {
         <h1>Chapter ${chapter.chapter_number}${chapter.title ? ": " + escapeHtml(chapter.title) : ""}</h1>
         <div class="reader-body">${paraHtml}</div>
         <div id="page-nav" class="page-nav-btns" style="display:none;">
-          <button class="secondary" onclick="pageFlip(-1)">← Page</button>
-          <button class="secondary" onclick="pageFlip(1)">Page →</button>
+          <button class="secondary" onclick="pageFlip(-1)">${icon("arrowLeft")} Page</button>
+          <button class="secondary" onclick="pageFlip(1)">Page ${icon("arrowRight")}</button>
         </div>
         <div class="chapter-nav">
-          ${prev_chapter ? `<a class="btn secondary" href="/read.html?story=${storyId}&chapter=${prev_chapter}">← Chapter ${prev_chapter}</a>` : "<span></span>"}
-          ${next_chapter ? `<a class="btn" href="/read.html?story=${storyId}&chapter=${next_chapter}">Chapter ${next_chapter} →</a>` : "<span></span>"}
+          ${prev_chapter ? `<a class="btn secondary" href="/read.html?story=${storyId}&chapter=${prev_chapter}">${icon("arrowLeft")} Chapter ${prev_chapter}</a>` : "<span></span>"}
+          ${next_chapter ? `<a class="btn" href="/read.html?story=${storyId}&chapter=${next_chapter}">Chapter ${next_chapter} ${icon("arrowRight")}</a>` : "<span></span>"}
         </div>
       </div>
     `;
@@ -297,7 +298,7 @@ function commentHtml(c, isReply) {
       <div class="who"><a href="/user.html?name=${encodeURIComponent(c.username)}">${escapeHtml(c.username)}</a>${c.display_badge ? `<span class="comment-badge">${c.display_badge}</span>` : ""}
         <span class="when">${timeAgo(c.created_at)}</span>
         ${currentUser && !isReply ? `<button class="small secondary reply-btn" data-id="${c.id}" style="margin-left:8px;padding:1px 7px;font-size:0.7rem;">Reply</button>` : ""}
-        ${canDelete(c) ? `<button class="small danger comment-del-btn" data-id="${c.id}" style="margin-left:6px;padding:1px 7px;font-size:0.7rem;">🗑</button>` : ""}
+        ${canDelete(c) ? `<button class="small danger comment-del-btn" data-id="${c.id}" style="margin-left:6px;padding:1px 7px;font-size:0.7rem;" title="Delete comment">${icon("trash")}</button>` : ""}
       </div>
       <div>${escapeHtml(c.content)}</div>
       <div class="reply-box" data-parent="${c.id}" style="display:none;margin-top:6px;">

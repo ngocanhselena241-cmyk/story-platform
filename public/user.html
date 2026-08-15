@@ -30,7 +30,7 @@ async function load() {
         ${avatar}
         <div>
           <div style="font-size:1.3rem;font-weight:700;">${escapeHtml(user.username)}</div>
-          <div class="muted" style="font-size:0.85rem;">${isUploader ? "✍️ Uploader" : "📖 Reader"} · joined ${new Date(user.created_at).toLocaleDateString()}</div>
+          <div class="muted" style="font-size:0.85rem;">${isUploader ? `<span class="meta-icon">${icon("quill")}Uploader</span>` : `<span class="meta-icon">${icon("bookOpen")}Reader</span>`} · joined ${new Date(user.created_at).toLocaleDateString()}</div>
         </div>
       </div>
       ${user.bio ? `<p>${escapeHtml(user.bio)}</p>` : ""}

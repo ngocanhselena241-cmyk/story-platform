@@ -1,0 +1,5 @@
+# Local wrangler dev state (miniflare D1, cache, logs)
+.wrangler/
+
+node_modules/
+.DS_Store

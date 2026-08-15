@@ -208,8 +208,9 @@ async function load() {
     barStory.href = `/story.html?id=${storyId}`;
     document.title = `Ch. ${chapter.chapter_number} — ${story.title}`;
 
-    // The author of the story (and admins) can drop images between paragraphs.
-    canEditChapter = !!currentUser && (currentUser.role === "admin" || story.author_id === currentUser.id);
+    // Only this story's own author can drop images between paragraphs — not
+    // other uploaders, not admins, just the person who wrote it.
+    canEditChapter = !!currentUser && story.author_id === currentUser.id;
 
     const paragraphs = chapter.content.split(/\n+/).filter(p => p.trim());
     const paraHtml = paragraphs.map((p, i) => `

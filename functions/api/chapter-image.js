@@ -2,13 +2,15 @@ import { getUser, json, badRequest, unauthorized, forbidden } from "../_lib/auth
 
 const MAX_IMAGE = 400000; // ~400KB of base64
 
-// Only the story's author (or an admin) may add pictures to a chapter.
+// Only the story's own author may add or remove pictures in its chapters —
+// deliberately not admins, since this is the author's illustration work,
+// not a moderation concern (admins still remove the lot via chapter/story delete).
 async function canEdit(env, user, chapterId) {
   const row = await env.DB.prepare(
     `SELECT s.author_id FROM chapters c JOIN stories s ON s.id = c.story_id WHERE c.id = ?`
   ).bind(chapterId).first();
   if (!row) return null;
-  return row.author_id === user.id || user.role === "admin";
+  return row.author_id === user.id;
 }
 
 // GET /api/chapter-image?chapter=123  -- images for a chapter, in reading order

@@ -35,9 +35,6 @@
 
   <div id="continue-section"></div>
 
-  <div class="section-title">✨ Recently Updated</div>
-  <div id="recent-list" class="story-grid"><p class="muted">Loading...</p></div>
-
   <div class="section-title">📚 All Stories</div>
   <div id="story-list" class="story-grid"><p class="muted">Loading...</p></div>
 
@@ -85,15 +82,6 @@ document.addEventListener("click", (e) => {
 
 async function load() {
   loadStoryList();
-
-  try {
-    const { stories } = await api("/api/stories?sort=updated");
-    document.getElementById("recent-list").innerHTML = stories.length
-      ? stories.slice(0, 3).map(renderCoverCard).join("")
-      : `<p class="muted">No stories yet.</p>`;
-  } catch (e) {
-    document.getElementById("recent-list").innerHTML = "";
-  }
 
   try {
     const { tags } = await api("/api/tags");

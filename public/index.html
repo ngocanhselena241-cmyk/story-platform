@@ -98,24 +98,52 @@ async function load() {
   } catch (e) {}
 
   const user = await renderNav();
-  if (user) {
-    try {
-      const { continue_reading } = await api("/api/library");
-      if (continue_reading.length) {
-        const c = continue_reading[0];
-        const pct = Math.round((c.chapter_number / c.total_chapters) * 100);
-        document.getElementById("continue-section").innerHTML = `
-          <div class="continue-compact">
-            <div class="cc-info">
-              <div class="cc-title">${escapeHtml(c.title)}</div>
-              <div class="story-meta">Ch. ${c.chapter_number}/${c.total_chapters} · ${pct}%</div>
-              <div class="progress-bar" style="max-width:200px;"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
-            </div>
-            <a class="btn small" href="/read.html?story=${c.story_id}&chapter=${c.chapter_number}">Continue ${icon("arrowRight")}</a>
-          </div>`;
-      }
-    } catch (e) {}
-  }
+  if (user) await loadHomeCards();
+}
+
+function continueCard(c) {
+  const pct = Math.round((c.chapter_number / c.total_chapters) * 100);
+  return `
+    <div class="home-card">
+      <div class="cc-info">
+        <div class="cc-title">${escapeHtml(c.title)}</div>
+        <div class="story-meta">Ch. ${c.chapter_number}/${c.total_chapters} · ${pct}%</div>
+        <div class="progress-bar" style="max-width:200px;"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+      <a class="btn small" href="/read.html?story=${c.story_id}&chapter=${c.chapter_number}">Continue ${icon("arrowRight")}</a>
+    </div>`;
+}
+
+function quoteCard(q) {
+  return `
+    <div class="home-card quote-card">
+      <div class="cc-info">
+        <div class="quote-text">"${escapeHtml(q.quote_text)}"</div>
+        <div class="story-meta" style="margin-top:4px;">
+          — <a href="/story.html?id=${q.story_id}">${escapeHtml(q.story_title)}</a>, Ch. ${q.chapter_number}
+        </div>
+      </div>
+    </div>`;
+}
+
+// The strip above the story grid: a random saved quote, what you're reading,
+// either, or neither — whichever the reader turned on in Settings.
+async function loadHomeCards() {
+  const [reading, quote] = await Promise.all([
+    homePrefs.showContinue
+      ? api("/api/library").then(d => d.continue_reading[0] || null).catch(() => null)
+      : null,
+    homePrefs.showQuote
+      ? api("/api/quote").then(d => d.quotes.length ? d.quotes[Math.floor(Math.random() * d.quotes.length)] : null).catch(() => null)
+      : null
+  ]);
+
+  const cards = [];
+  if (quote) cards.push(quoteCard(quote));
+  if (reading) cards.push(continueCard(reading));
+  if (!cards.length) return;
+
+  document.getElementById("continue-section").innerHTML = `<div class="home-row">${cards.join("")}</div>`;
 }
 
 load();

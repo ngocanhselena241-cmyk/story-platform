@@ -1,15 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Livvic:wght@400;600&family=Lora:wght@400;600&family=Quicksand:wght@400;600&family=Philosopher:wght@400;700&family=Merriweather:wght@400;700&family=Nunito:wght@400;700&display=swap');
 
+/* Light mode: sage + cream palette (#778873 · #a1bc98 · #dccfc0 · #fdf6ed) */
 :root {
-  --bg: #ffffff;
-  --bg-alt: #f5f7f5;
-  --text: #1a1f1a;
-  --text-muted: #6b756b;
-  --border: #e2e6e2;
-  --accent: #2e7d4f;
-  --accent-dark: #1f5c38;
-  --card-bg: #ffffff;
-  --danger: #b3413a;
+  --bg: #fdf6ed;
+  --bg-alt: #f5ecdf;
+  --text: #2b3128;
+  --text-muted: #6a7264;
+  --border: #dccfc0;
+  --accent: #6b7a67;
+  --accent-dark: #55634f;
+  --card-bg: #fffdf9;
+  --danger: #b0503f;
 }
 
 [data-theme="dark"] {
@@ -84,8 +85,8 @@ button.secondary, .btn.secondary { background: transparent; color: var(--text); 
 button.danger, .btn.danger { background: var(--danger); }
 button.small { padding: 5px 10px; font-size: 0.8rem; }
 
-.btn.signup-btn { background: #8fd6ab; color: #1a1f1a; }
-.btn.signup-btn:hover { background: #7ac79a; color: #1a1f1a; }
+.btn.signup-btn { background: #a1bc98; color: var(--text); }
+.btn.signup-btn:hover { background: #93b089; color: var(--text); }
 [data-theme="dark"] .btn.signup-btn { background: var(--accent); color: #fff; }
 [data-theme="dark"] .btn.signup-btn:hover { background: var(--accent-dark); color: #fff; }
 
@@ -99,6 +100,7 @@ input, textarea, select {
   font-size: 0.95rem;
   font-family: inherit;
 }
+input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color: var(--accent); }
 label { display: block; margin: 14px 0 6px; font-size: 0.9rem; color: var(--text-muted); }
 
 .card {
@@ -238,14 +240,28 @@ label { display: block; margin: 14px 0 6px; font-size: 0.9rem; color: var(--text
 .cover-side-desc { margin-top: 8px; line-height: 1.45; }
 
 /* Compact continue reading */
-.continue-compact {
+/* Home strip: quote on the left, continue-reading on the right. Whatever is
+   turned on shares one row of the same height a single card used to take. */
+.home-row { display: flex; align-items: stretch; gap: 12px; margin-bottom: 8px; }
+.home-row > * { flex: 1 1 0; min-width: 0; }
+
+.home-card {
   display: flex; align-items: center; gap: 12px;
   border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg);
-  padding: 10px 14px; margin-bottom: 8px;
+  padding: 10px 14px; min-height: 78px;
 }
-.continue-compact .cc-info { flex: 1; min-width: 0; }
-.continue-compact .cc-title {
+.home-card .cc-info { flex: 1; min-width: 0; }
+.home-card .cc-title {
   font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;
+}
+.quote-card .quote-text {
+  font-style: italic; font-size: 0.92rem; line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 620px) {
+  .home-row { flex-direction: column; }
 }
 
 /* Scroll to top/bottom buttons */

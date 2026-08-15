@@ -11,6 +11,14 @@ function toggleTheme() {
 }
 initTheme();
 
+// ---- Home page preferences (kept per browser, like the theme) ----
+const homePrefs = {
+  get showContinue() { return localStorage.getItem("home-continue") !== "off"; },
+  set showContinue(on) { localStorage.setItem("home-continue", on ? "on" : "off"); },
+  get showQuote() { return localStorage.getItem("home-quote") !== "off"; },
+  set showQuote(on) { localStorage.setItem("home-quote", on ? "on" : "off"); }
+};
+
 // ---- Icons ----
 // Minimal line icons, drawn on a 24x24 grid and inheriting the surrounding
 // text colour and size. Use icon("eye") anywhere a string of HTML is built.

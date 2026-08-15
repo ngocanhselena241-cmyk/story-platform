@@ -20,6 +20,19 @@
       <input type="radio" name="theme" value="dark" style="width:auto;"> <span class="meta-icon" id="i-dark">Dark</span>
     </label>
   </div>
+  <div class="section-title">Home page</div>
+  <div class="card">
+    <label style="display:flex;align-items:center;gap:10px;margin:6px 0;">
+      <input type="checkbox" id="pref-continue" style="width:auto;"> <span>Show what I'm currently reading</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;margin:6px 0;">
+      <input type="checkbox" id="pref-quote" style="width:auto;"> <span>Show a random saved quote</span>
+    </label>
+    <p class="muted" style="font-size:0.82rem;margin:8px 0 0;">
+      With both on they sit side by side; with one on it takes the whole strip.
+    </p>
+  </div>
+
   <p class="muted" style="font-size:0.85rem;">More settings coming later.</p>
 </div>
 
@@ -36,6 +49,13 @@ document.querySelectorAll('input[name="theme"]').forEach(radio => {
     localStorage.setItem("theme", radio.value);
   };
 });
+
+const contBox = document.getElementById("pref-continue");
+const quoteBox = document.getElementById("pref-quote");
+contBox.checked = homePrefs.showContinue;
+quoteBox.checked = homePrefs.showQuote;
+contBox.onchange = () => { homePrefs.showContinue = contBox.checked; };
+quoteBox.onchange = () => { homePrefs.showQuote = quoteBox.checked; };
 </script>
 </body>
 </html>

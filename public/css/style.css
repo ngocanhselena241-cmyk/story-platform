@@ -312,8 +312,65 @@ label { display: block; margin: 14px 0 6px; font-size: 0.9rem; color: var(--text
   overflow: hidden;
 }
 
+/* Home-page filter row */
+.filter-row { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+.filter-row .search-box { flex: 1; min-width: 200px; display: flex; }
+.filter-row #sort-select { max-width: 170px; }
+.filter-row #status-select { max-width: 130px; }
+
+/* ---- Small screens ---- */
+
+/* The nav is the one thing that used to force the page wider than the
+   phone: let it fold onto a second row instead. */
+@media (max-width: 720px) {
+  nav.topnav .container { flex-wrap: wrap; row-gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+  .nav-links { width: 100%; flex-wrap: wrap; gap: 14px; font-size: 0.9rem; }
+  .brand { font-size: 1.1rem; }
+  .profile-dropdown { right: 0; left: auto; }
+  .bell-dropdown { width: min(290px, 82vw); }
+}
+
 @media (max-width: 620px) {
+  .container { padding: 0 14px; }
+  h1 { font-size: 1.55rem; line-height: 1.25; }
+  .section-title { margin-top: 26px; }
+
   .home-row { flex-direction: column; }
+
+  .filter-row { flex-direction: column; }
+  .filter-row > *, .filter-row #sort-select, .filter-row #status-select { max-width: none; width: 100%; }
+  .filter-row .tags-dropdown > button { width: 100%; }
+
+  .story-grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; }
+
+  .card { padding: 13px 14px; }
+  .chapter-row { flex-wrap: wrap; gap: 4px; }
+  .chapter-row .chapter-stats { width: 100%; justify-content: flex-start; }
+
+  .comment.is-reply { margin-left: 22px; }
+  .comment-actions { flex-wrap: wrap; }
+
+  #reader-drawer { width: min(300px, 86vw); }
+  .chapter-nav { gap: 10px; }
+  .chapter-nav .btn { font-size: 0.85rem; padding: 8px 12px; }
+
+  #scroll-btns { right: 10px; bottom: 10px; gap: 6px; }
+  #scroll-btns button { width: 34px; height: 34px; }
+}
+
+/* Touch screens have no hover: the first tap on a cover shows the blurb,
+   the second opens the story. */
+@media (hover: none) {
+  .cover-wrap:hover .cover-side { display: none; }
+  .cover-wrap.revealed .cover-side {
+    display: block; inset: 0; left: 0; right: 0; width: auto;
+    max-height: none; overflow: hidden;
+    background: rgba(20, 22, 20, 0.93);
+  }
+  .cover-wrap.revealed .cover-side::after {
+    content: "Tap again to open";
+    display: block; margin-top: 10px; font-size: 0.7rem; opacity: 0.75;
+  }
 }
 
 /* Scroll to top/bottom buttons */

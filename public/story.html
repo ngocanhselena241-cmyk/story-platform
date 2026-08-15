@@ -91,9 +91,9 @@ async function load() {
 
     const isAdmin = currentUser && currentUser.role === "admin";
     const chapterList = chapters.length
-      ? chapters.map(c => `<div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+      ? chapters.map(c => `<div class="card chapter-row" style="display:flex;justify-content:space-between;align-items:center;">
           <a href="/read.html?story=${storyId}&chapter=${c.chapter_number}">Chapter ${c.chapter_number}${c.title ? ": " + escapeHtml(c.title) : ""}</a>
-          <span style="display:flex;align-items:center;gap:12px;">
+          <span class="chapter-stats" style="display:flex;align-items:center;gap:12px;">
             <span class="muted" style="font-size:0.8rem;display:flex;align-items:center;gap:12px;">
               <span class="meta-icon" title="Views">${icon("eye")}${c.views || 0}</span>
               <span class="meta-icon" title="Comments">${icon("comment")}${c.comment_count || 0}</span>

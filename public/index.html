@@ -10,18 +10,18 @@
 <div id="nav"></div>
 <div class="container" style="padding-top:24px;">
 
-  <div style="margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap;">
-    <div style="flex:1;min-width:200px;display:flex;">
+  <div class="filter-row">
+    <div class="search-box">
       <input id="search" placeholder="Search stories by title..." style="border-radius:6px 0 0 6px;">
       <button id="search-btn" style="border-radius:0 6px 6px 0;" title="Search"></button>
     </div>
-    <select id="sort-select" style="max-width:170px;">
+    <select id="sort-select">
       <option value="updated">Recently Updated</option>
       <option value="popular">Most Popular</option>
       <option value="rating">Highest Rated</option>
       <option value="new">Newest</option>
     </select>
-    <select id="status-select" style="max-width:130px;">
+    <select id="status-select">
       <option value="">All Status</option>
       <option value="ongoing">Ongoing</option>
       <option value="completed">Completed</option>

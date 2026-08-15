@@ -337,6 +337,25 @@ document.addEventListener("mouseover", (e) => {
   wrap.classList.toggle("flip", rect.right + 245 > window.innerWidth);
 });
 
+// On a touch screen there is no hover to lean on, so the first tap on a
+// cover shows its description and the second one opens the story.
+function clearRevealedCovers(except) {
+  document.querySelectorAll(".cover-wrap.revealed").forEach(w => {
+    if (w !== except) w.classList.remove("revealed");
+  });
+}
+document.addEventListener("click", (e) => {
+  if (!window.matchMedia("(hover: none)").matches) return;
+  const card = e.target.closest && e.target.closest(".cover-card");
+  const wrap = card && card.closest(".cover-wrap");
+  if (!wrap) { clearRevealedCovers(null); return; }
+  if (!wrap.classList.contains("revealed")) {
+    e.preventDefault();
+    clearRevealedCovers(wrap);
+    wrap.classList.add("revealed");
+  }
+});
+
 // ---- Scroll to top/bottom buttons (all pages) ----
 (function initScrollButtons() {
   const el = document.createElement("div");

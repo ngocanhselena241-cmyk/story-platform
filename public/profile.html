@@ -38,7 +38,7 @@ async function load() {
     <h1>Your profile</h1>
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
       <img id="avatar-img" src="${profile.avatar || ""}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;background:var(--accent);${profile.avatar ? "" : "display:none;"}">
-      <div id="avatar-fallback" style="width:80px;height:80px;border-radius:50%;background:var(--accent);color:#fff;display:${profile.avatar ? "none" : "flex"};align-items:center;justify-content:center;font-size:2rem;font-weight:700;">${escapeHtml(profile.username[0].toUpperCase())}</div>
+      <div id="avatar-fallback" style="width:80px;height:80px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:${profile.avatar ? "none" : "flex"};align-items:center;justify-content:center;font-size:2rem;font-weight:700;">${escapeHtml(profile.username[0].toUpperCase())}</div>
       <div>
         <div style="font-size:1.2rem;font-weight:700;">${escapeHtml(profile.username)}</div>
         <div class="muted" style="font-size:0.85rem;">${escapeHtml(profile.role)} · joined ${new Date(profile.created_at).toLocaleDateString()}</div>

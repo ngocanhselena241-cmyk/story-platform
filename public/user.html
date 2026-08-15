@@ -22,7 +22,7 @@ async function load() {
     const { user, reading, badges, stories } = await api(`/api/user?name=${encodeURIComponent(name)}`);
     const avatar = user.avatar
       ? `<img src="${user.avatar}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">`
-      : `<div style="width:80px;height:80px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;">${escapeHtml(user.username[0].toUpperCase())}</div>`;
+      : `<div style="width:80px;height:80px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;">${escapeHtml(user.username[0].toUpperCase())}</div>`;
     const isUploader = user.role === "uploader" || user.role === "admin";
 
     let html = `

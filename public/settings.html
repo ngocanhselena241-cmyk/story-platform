@@ -17,8 +17,14 @@
       <input type="radio" name="theme" value="light" style="width:auto;"> <span class="meta-icon" id="i-light">Light</span>
     </label>
     <label style="display:flex;align-items:center;gap:10px;margin:6px 0;">
+      <input type="radio" name="theme" value="white" style="width:auto;"> <span class="meta-icon" id="i-white">White</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;margin:6px 0;">
       <input type="radio" name="theme" value="dark" style="width:auto;"> <span class="meta-icon" id="i-dark">Dark</span>
     </label>
+    <p class="muted" style="font-size:0.82rem;margin:8px 0 0;">
+      White keeps the reading space plain white, with sage only on the bar and buttons.
+    </p>
   </div>
   <div class="section-title">Home page</div>
   <div class="card">
@@ -40,14 +46,17 @@
 <script>
 renderNav();
 document.getElementById("i-light").innerHTML = `${icon("sun")}Light`;
+document.getElementById("i-white").innerHTML = `${icon("contrast")}White`;
 document.getElementById("i-dark").innerHTML = `${icon("moon")}Dark`;
-const current = localStorage.getItem("theme") || "light";
-document.querySelector(`input[name="theme"][value="${current}"]`).checked = true;
+
+function syncThemeRadios() {
+  const picked = document.querySelector(`input[name="theme"][value="${currentTheme()}"]`);
+  if (picked) picked.checked = true;
+}
+syncThemeRadios();
+document.addEventListener("themechange", syncThemeRadios);
 document.querySelectorAll('input[name="theme"]').forEach(radio => {
-  radio.onchange = () => {
-    document.documentElement.setAttribute("data-theme", radio.value);
-    localStorage.setItem("theme", radio.value);
-  };
+  radio.onchange = () => setTheme(radio.value);
 });
 
 const contBox = document.getElementById("pref-continue");

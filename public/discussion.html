@@ -36,7 +36,7 @@ async function load() {
         <input id="t-title" placeholder="What do you want to talk about?">
         <label>Category</label>
         <div style="display:flex;gap:8px;">
-          <button class="secondary small cat-pick" data-cat="general" style="background:var(--accent);color:#fff;">General</button>
+          <button class="secondary small cat-pick" data-cat="general" style="background:var(--accent);color:var(--on-accent);">General</button>
           <button class="secondary small cat-pick" data-cat="stories">Stories</button>
         </div>
         <label>Content</label>
@@ -56,7 +56,7 @@ async function load() {
       btn.onclick = () => {
         category = btn.dataset.cat;
         document.querySelectorAll(".cat-pick").forEach(b => { b.style.background = ""; b.style.color = ""; });
-        btn.style.background = "var(--accent)"; btn.style.color = "#fff";
+        btn.style.background = "var(--accent)"; btn.style.color = "var(--on-accent)";
       };
     });
     document.querySelectorAll(".emote-btn").forEach(btn => {

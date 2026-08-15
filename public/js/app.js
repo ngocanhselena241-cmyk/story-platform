@@ -1,13 +1,24 @@
-// ---- Theme (light/dark) ----
-function initTheme() {
-  const saved = localStorage.getItem("theme") || "light";
-  document.documentElement.setAttribute("data-theme", saved);
+// ---- Theme (light / white / dark) ----
+const THEMES = ["light", "white", "dark"];
+
+function currentTheme() {
+  const saved = localStorage.getItem("theme");
+  return THEMES.includes(saved) ? saved : "light";
 }
+function setTheme(name) {
+  const theme = THEMES.includes(name) ? name : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("theme", theme);
+  // Let any open settings control follow along.
+  document.dispatchEvent(new CustomEvent("themechange", { detail: theme }));
+}
+function initTheme() {
+  document.documentElement.setAttribute("data-theme", currentTheme());
+}
+// The nav button steps through the themes in order.
 function toggleTheme() {
-  const current = document.documentElement.getAttribute("data-theme");
-  const next = current === "dark" ? "light" : "dark";
-  document.documentElement.setAttribute("data-theme", next);
-  localStorage.setItem("theme", next);
+  const i = THEMES.indexOf(currentTheme());
+  setTheme(THEMES[(i + 1) % THEMES.length]);
 }
 initTheme();
 

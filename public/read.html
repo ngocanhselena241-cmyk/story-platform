@@ -21,6 +21,12 @@
 <div id="drawer-overlay"></div>
 <div id="reader-drawer">
   <div class="section-title" style="margin-top:0;">Viewer settings</div>
+  <label>Theme</label>
+  <select id="theme-select">
+    <option value="light">Light</option>
+    <option value="white">White</option>
+    <option value="dark">Dark</option>
+  </select>
   <label>Font size</label>
   <input type="range" id="font-size-slider" min="14" max="26" value="18">
   <label>Line spacing</label>
@@ -138,6 +144,11 @@ function pageFlip(dir) {
   pageIndex = Math.min(maxPage, Math.max(0, pageIndex + dir));
   body.scrollTo({ left: pageIndex * step, behavior: "smooth" });
 }
+
+const themeSelect = document.getElementById("theme-select");
+themeSelect.value = currentTheme();
+themeSelect.onchange = (e) => setTheme(e.target.value);
+document.addEventListener("themechange", (e) => { themeSelect.value = e.detail; });
 
 document.getElementById("font-size-slider").oninput = (e) => { settings.fontSize = e.target.value; applySettings(); };
 document.getElementById("line-height-slider").oninput = (e) => { settings.lineHeight = e.target.value; applySettings(); };

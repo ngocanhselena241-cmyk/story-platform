@@ -40,7 +40,7 @@ async function load() {
       <div style="white-space:pre-wrap;">${escapeHtml(thread.content)}</div>
       ${thread.image ? `<img src="${thread.image}" style="max-width:100%;border-radius:10px;margin-top:12px;">` : ""}
       <div style="display:flex;gap:10px;margin-top:14px;">
-        <button class="secondary" id="like-btn" style="${my_vote === 1 ? "background:var(--accent);color:#fff;" : ""}">${icon("thumbUp")} <span id="like-count">${thread.likes}</span></button>
+        <button class="secondary" id="like-btn" style="${my_vote === 1 ? "background:var(--accent);color:var(--on-accent);" : ""}">${icon("thumbUp")} <span id="like-count">${thread.likes}</span></button>
         <button class="secondary" id="dislike-btn" style="${my_vote === -1 ? "background:var(--danger);color:#fff;" : ""}">${icon("thumbDown")} <span id="dislike-count">${thread.dislikes}</span></button>
       </div>
     `;

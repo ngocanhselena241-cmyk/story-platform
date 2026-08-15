@@ -91,10 +91,20 @@ async function renderNav() {
     try { ({ profile } = await api("/api/profile")); } catch (e) {}
   }
 
-  const mainLinks = [`<a href="/index.html">Home</a>`, `<a href="/discussion.html">Discussion</a>`, `<a href="/top.html">Ranking</a>`];
-  if (user) mainLinks.push(`<a href="/report.html">Report</a>`);
-  if (user && (user.role === "uploader" || user.role === "admin")) mainLinks.push(`<a href="/upload.html">Upload</a>`);
-  if (user && user.role === "admin") mainLinks.push(`<a href="/admin.html">Admin</a>`);
+  // Each link carries a short label too; on a phone, accounts with the extra
+  // uploader/admin links switch to those so the bar stays two rows.
+  const navLink = (href, full, short) =>
+    `<a href="${href}"><span class="nav-full">${full}</span><span class="nav-short">${short}</span></a>`;
+
+  const mainLinks = [
+    navLink("/index.html", "Home", "Home"),
+    navLink("/discussion.html", "Discussion", "Chat"),
+    navLink("/top.html", "Ranking", "Rank")
+  ];
+  if (user) mainLinks.push(navLink("/report.html", "Report", "Report"));
+  const isUploader = user && (user.role === "uploader" || user.role === "admin");
+  if (isUploader) mainLinks.push(navLink("/upload.html", "Upload", "Up"));
+  if (user && user.role === "admin") mainLinks.push(navLink("/admin.html", "Admin", "Admin"));
 
   let bellHtml = "";
   if (user) {
@@ -128,7 +138,7 @@ async function renderNav() {
   el.innerHTML = `
     <nav class="topnav"><div class="container">
       <a class="brand" href="/index.html">Nayedaba</a>
-      <div class="nav-links">${mainLinks.join("")}${bellHtml}<button class="theme-toggle" id="theme-btn" title="Switch theme">${icon("contrast", "icon-lg")}</button>${rightSide}</div>
+      <div class="nav-links${isUploader ? " nav-compact" : ""}">${mainLinks.join("")}${bellHtml}<button class="theme-toggle" id="theme-btn" title="Switch theme">${icon("contrast", "icon-lg")}</button>${rightSide}</div>
     </div></nav>`;
 
   document.getElementById("theme-btn").onclick = toggleTheme;

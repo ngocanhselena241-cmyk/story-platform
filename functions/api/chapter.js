@@ -12,7 +12,7 @@ export async function onRequestGet({ request, env }) {
   ).bind(storyId, num).first();
   if (!chapter) return json({ error: "Chapter not found." }, 404);
 
-  const story = await env.DB.prepare("SELECT id, title FROM stories WHERE id = ?").bind(storyId).first();
+  const story = await env.DB.prepare("SELECT id, title, author_id FROM stories WHERE id = ?").bind(storyId).first();
 
   const prev = await env.DB.prepare(
     "SELECT chapter_number FROM chapters WHERE story_id = ? AND chapter_number < ? ORDER BY chapter_number DESC LIMIT 1"

@@ -65,6 +65,21 @@ async function load() {
     <button id="save-btn" style="margin-top:12px;">Save profile</button>
     <div id="msg" class="error-msg"></div>
 
+    <div class="section-title">Password</div>
+    <div class="card">
+      <label>Current password</label>
+      <input type="password" id="pw-current" autocomplete="current-password">
+      <label>New password</label>
+      <input type="password" id="pw-new" autocomplete="new-password">
+      <label>Repeat new password</label>
+      <input type="password" id="pw-repeat" autocomplete="new-password">
+      <button id="pw-btn" style="margin-top:12px;">Change password</button>
+      <div id="pw-msg" class="error-msg"></div>
+      <p class="muted" style="font-size:0.8rem;margin:8px 0 0;">
+        At least 8 characters. Changing it signs you out everywhere else.
+      </p>
+    </div>
+
     <div class="section-title">Your libraries</div>
     <div class="card">
       <div class="muted" style="font-size:0.9rem;margin-bottom:10px;">${libraryLine}</div>
@@ -100,6 +115,25 @@ async function load() {
       btn.style.background = "var(--accent)";
     };
   });
+
+  document.getElementById("pw-btn").onclick = async () => {
+    const msg = document.getElementById("pw-msg");
+    const current = document.getElementById("pw-current").value;
+    const next = document.getElementById("pw-new").value;
+    const repeat = document.getElementById("pw-repeat").value;
+    msg.className = "error-msg";
+    if (next !== repeat) { msg.textContent = "The two new passwords don't match."; return; }
+    try {
+      await api("/api/password", { method: "POST", body: JSON.stringify({
+        current_password: current, new_password: next
+      })});
+      msg.className = "success-msg";
+      msg.textContent = "Password changed.";
+      ["pw-current", "pw-new", "pw-repeat"].forEach(id => { document.getElementById(id).value = ""; });
+    } catch (e) {
+      msg.textContent = e.message;
+    }
+  };
 
   document.getElementById("save-btn").onclick = async () => {
     const msg = document.getElementById("msg");

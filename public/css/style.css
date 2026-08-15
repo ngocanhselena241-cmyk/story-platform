@@ -322,12 +322,26 @@ label { display: block; margin: 14px 0 6px; font-size: 0.9rem; color: var(--text
 
 /* The nav is the one thing that used to force the page wider than the
    phone: let it fold onto a second row instead. */
+.nav-short { display: none; }
+
 @media (max-width: 720px) {
   nav.topnav .container { flex-wrap: wrap; row-gap: 8px; padding-top: 10px; padding-bottom: 10px; }
   .nav-links { width: 100%; flex-wrap: wrap; gap: 14px; font-size: 0.9rem; }
   .brand { font-size: 1.1rem; }
   .profile-dropdown { right: 0; left: auto; }
   .bell-dropdown { width: min(290px, 82vw); }
+
+  /* Uploaders and admins carry two extra links: shorten the labels, tighten
+     the spacing, and let the avatar stand in for the username. */
+  .nav-links.nav-compact { gap: 8px; font-size: 0.8rem; }
+  .nav-compact .nav-short { display: inline; }
+  .nav-compact .nav-full { display: none; }
+  .nav-compact .profile-trigger { padding: 2px 4px; gap: 0; }
+  .nav-compact .profile-trigger > span { display: none; }
+  .nav-compact .profile-avatar { width: 26px; height: 26px; font-size: 0.8rem; }
+  .nav-compact .theme-toggle { padding: 3px 5px; }
+  .nav-compact .theme-toggle .icon-lg { width: 1em; height: 1em; }
+  .nav-compact .bell-btn { font-size: 1rem; padding: 2px 2px; }
 }
 
 @media (max-width: 620px) {
@@ -431,6 +445,25 @@ label { display: block; margin: 14px 0 6px; font-size: 0.9rem; color: var(--text
 /* Paragraph comment button: only on hover */
 .para-comment-btn { opacity: 0; transition: opacity 0.15s; }
 .para-wrap:hover .para-comment-btn { opacity: 1; }
+/* No hover on a touch screen, so keep the paragraph buttons faintly visible */
+@media (hover: none) {
+  .para-comment-btn { opacity: 0.45; }
+}
+
+/* Images an uploader dropped in between paragraphs */
+.para-images:empty { display: none; }
+.chapter-image-wrap { position: relative; margin: 14px 0; }
+.chapter-image { display: block; max-width: 100%; margin: 0 auto; border-radius: 10px; }
+.chapter-image-del {
+  position: absolute; top: 8px; right: 8px;
+  background: rgba(20, 22, 20, 0.75); color: #fff; border: none;
+  border-radius: 50%; width: 26px; height: 26px; padding: 0;
+  display: none; align-items: center; justify-content: center; font-size: 0.85rem;
+}
+.chapter-image-wrap:hover .chapter-image-del { display: flex; }
+@media (hover: none) {
+  .chapter-image-del { display: flex; }
+}
 
 /* Reader top bar (read page only) */
 #reader-bar {

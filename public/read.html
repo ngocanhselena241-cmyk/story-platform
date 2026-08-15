@@ -79,6 +79,7 @@ const chapterNum = params.get("chapter");
 let currentUser = null;
 let chapterId = null;
 let allComments = [];
+let canEditChapter = false;
 
 // ---- Reader settings ----
 const settings = {
@@ -207,10 +208,16 @@ async function load() {
     barStory.href = `/story.html?id=${storyId}`;
     document.title = `Ch. ${chapter.chapter_number} — ${story.title}`;
 
+    // The author of the story (and admins) can drop images between paragraphs.
+    canEditChapter = !!currentUser && (currentUser.role === "admin" || story.author_id === currentUser.id);
+
     const paragraphs = chapter.content.split(/\n+/).filter(p => p.trim());
     const paraHtml = paragraphs.map((p, i) => `
       <div class="para-wrap" data-para="${i}">
-        <p>${escapeHtml(p)}<button class="para-comment-btn" data-para="${i}" title="Comments on this paragraph">${icon("comment")}<span class="para-count" data-para="${i}"></span></button></p>
+        <p>${escapeHtml(p)}<button class="para-comment-btn" data-para="${i}" title="Comments on this paragraph">${icon("comment")}<span class="para-count" data-para="${i}"></span></button>${
+          canEditChapter ? `<button class="para-comment-btn para-add-btn" data-para="${i}" title="Upload an image after this paragraph">${icon("plus")}</button>` : ""
+        }</p>
+        <div class="para-images" data-para="${i}"></div>
         <div class="para-comment-panel" data-para="${i}" style="display:none;"></div>
       </div>`).join("");
 
@@ -243,8 +250,13 @@ async function load() {
            Ch. ${c.chapter_number}${c.title ? ": " + escapeHtml(c.title) : ""}</a>`).join("");
     } catch (e) {}
 
-    document.querySelectorAll(".para-comment-btn").forEach(btn => {
+    document.querySelectorAll(".para-comment-btn:not(.para-add-btn)").forEach(btn => {
       btn.onclick = () => toggleParaPanel(Number(btn.dataset.para));
+    });
+
+    await loadChapterImages();
+    document.querySelectorAll(".para-add-btn").forEach(btn => {
+      btn.onclick = () => addImageAfter(Number(btn.dataset.para));
     });
 
     if (currentUser) {
@@ -290,6 +302,45 @@ async function load() {
   } catch (e) {
     document.getElementById("content").innerHTML = `<p class="error-msg">Couldn't load this chapter.</p>`;
   }
+}
+
+// ---- Images placed between paragraphs (uploaders only) ----
+async function loadChapterImages() {
+  let images = [];
+  try { ({ images } = await api(`/api/chapter-image?chapter=${chapterId}`)); } catch (e) { return; }
+
+  document.querySelectorAll(".para-images").forEach(box => { box.innerHTML = ""; });
+  images.forEach(img => {
+    const box = document.querySelector(`.para-images[data-para="${img.paragraph_index}"]`);
+    if (!box) return;
+    box.insertAdjacentHTML("beforeend", `
+      <div class="chapter-image-wrap">
+        <img class="chapter-image" src="${img.image}" alt="${escapeHtml(img.caption || "")}">
+        ${canEditChapter ? `<button class="chapter-image-del" data-id="${img.id}" title="Remove image">${icon("close")}</button>` : ""}
+      </div>`);
+  });
+
+  document.querySelectorAll(".chapter-image-del").forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm("Remove this image?")) return;
+      await api(`/api/chapter-image?id=${btn.dataset.id}`, { method: "DELETE" });
+      loadChapterImages();
+    };
+  });
+}
+
+function addImageAfter(paraIndex) {
+  pickAndResizeImage(1000, async (dataUrl) => {
+    try {
+      await api("/api/chapter-image", { method: "POST", body: JSON.stringify({
+        chapter_id: chapterId, paragraph_index: paraIndex, image: dataUrl
+      })});
+      await loadChapterImages();
+      applyLayout(); // the page breaks move once an image lands
+    } catch (e) {
+      alert(e.message);
+    }
+  });
 }
 
 const MOODS = ["😭", "❤️", "🔥", "😂", "😱", "💀", "⚡"];

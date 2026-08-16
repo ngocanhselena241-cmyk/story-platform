@@ -173,6 +173,25 @@ document.addEventListener("click", (e) => {
   pageFlip(zone.classList.contains("right") ? 1 : -1);
 });
 
+// Touch: the comment (and, for the author, add-image) icons sit hidden
+// beside each paragraph — the first tap on a paragraph reveals them,
+// tapping elsewhere hides them again. A mouse still just hovers.
+function clearTouchedParas(except) {
+  document.querySelectorAll(".para-wrap.touched").forEach(w => {
+    if (w !== except) w.classList.remove("touched");
+  });
+}
+document.addEventListener("click", (e) => {
+  if (!window.matchMedia("(hover: none)").matches) return;
+  if (e.target.closest && e.target.closest(".para-comment-btn")) return; // already visible, let it act
+  const wrap = e.target.closest && e.target.closest(".para-wrap");
+  if (!wrap) { clearTouchedParas(null); return; }
+  if (!wrap.classList.contains("touched")) {
+    clearTouchedParas(wrap);
+    wrap.classList.add("touched");
+  }
+});
+
 // ---- Drawer ----
 document.getElementById("drawer-toggle").innerHTML = icon("menu", "icon-lg");
 const drawer = document.getElementById("reader-drawer");

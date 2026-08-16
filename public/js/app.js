@@ -367,6 +367,10 @@ document.addEventListener("click", (e) => {
 });
 
 // ---- Scroll to top/bottom buttons (all pages) ----
+// Hidden near the top of the page — full-width content there (like the
+// homepage's quote/continue-reading strip) would otherwise sit right under
+// these fixed buttons on a phone. They fade in once there's somewhere to
+// scroll back from.
 (function initScrollButtons() {
   const el = document.createElement("div");
   el.id = "scroll-btns";
@@ -374,4 +378,8 @@ document.addEventListener("click", (e) => {
   document.body.appendChild(el);
   el.querySelector("#scroll-top").onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
   el.querySelector("#scroll-bottom").onclick = () => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+
+  const sync = () => el.classList.toggle("visible", window.scrollY > 220);
+  sync();
+  window.addEventListener("scroll", sync, { passive: true });
 })();

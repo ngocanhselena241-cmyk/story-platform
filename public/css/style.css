@@ -387,11 +387,14 @@ label { display: block; margin: 14px 0 6px; font-size: 0.9rem; color: var(--text
   }
 }
 
-/* Scroll to top/bottom buttons */
+/* Scroll to top/bottom buttons: hidden until scrolled, see initScrollButtons */
 #scroll-btns {
   position: fixed; right: 16px; bottom: 16px; z-index: 90;
   display: flex; flex-direction: column; gap: 8px;
+  opacity: 0; pointer-events: none; transform: translateY(6px);
+  transition: opacity 0.15s, transform 0.15s;
 }
+#scroll-btns.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
 #scroll-btns button {
   width: 40px; height: 40px; border-radius: 50%; padding: 0;
   background: var(--card-bg); color: var(--text); border: 1px solid var(--border);

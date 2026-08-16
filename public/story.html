@@ -131,20 +131,9 @@ async function load() {
         <button id="rate-btn" class="small">Submit</button>
         <span id="rate-msg"></span>
       </div>` : ""}
-      <div id="mood-timeline"></div>
-
       <div class="section-title">Chapters</div>
       ${chapterList}
     `;
-
-    try {
-      const { timeline } = await api(`/api/moods?story=${storyId}`);
-      if (timeline.length) {
-        const line = timeline.map(t => `Ch.${t.chapter_number} ${t.mood}`).join("  ·  ");
-        document.getElementById("mood-timeline").innerHTML =
-          `<div class="section-title">Mood Timeline</div><p class="muted">${line}</p>`;
-      }
-    } catch (e) {}
 
     const rateBtn = document.getElementById("rate-btn");
     if (rateBtn) {

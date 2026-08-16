@@ -32,7 +32,6 @@ export async function onRequestDelete({ request, env }) {
     "DELETE FROM comment_votes WHERE comment_id IN (SELECT id FROM comments WHERE chapter_id IN (SELECT id FROM chapters WHERE story_id = ?))"
   ).bind(id).run();
   await env.DB.prepare("DELETE FROM comments WHERE chapter_id IN (SELECT id FROM chapters WHERE story_id = ?)").bind(id).run();
-  await env.DB.prepare("DELETE FROM chapter_moods WHERE chapter_id IN (SELECT id FROM chapters WHERE story_id = ?)").bind(id).run();
   await env.DB.prepare("DELETE FROM quotes WHERE story_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM reading_log WHERE story_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM reading_progress WHERE story_id = ?").bind(id).run();

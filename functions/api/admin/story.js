@@ -7,7 +7,7 @@ export async function onRequestGet({ request, env }) {
   if (user.role !== "admin") return forbidden();
 
   const { results } = await env.DB.prepare(
-    `SELECT s.id, s.title, s.approval_status, u.username AS author_name
+    `SELECT s.id, s.title, s.alt_title, s.approval_status, u.username AS author_name
      FROM stories s JOIN users u ON u.id = s.author_id
      WHERE s.approval_status = 'pending' ORDER BY s.created_at ASC`
   ).all();

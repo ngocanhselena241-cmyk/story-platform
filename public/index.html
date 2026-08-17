@@ -16,7 +16,7 @@
 
   <div class="filter-row">
     <div class="search-box">
-      <input id="search" placeholder="Search stories by title..." style="border-radius:6px 0 0 6px;">
+      <input id="search" placeholder="Search stories by title..." title="Matches either the title or the alternative title" style="border-radius:6px 0 0 6px;">
       <button id="search-btn" style="border-radius:0 6px 6px 0;" title="Search"></button>
     </div>
     <select id="sort-select">
@@ -110,7 +110,7 @@ function continueCard(c) {
   return `
     <div class="home-card">
       <div class="cc-info">
-        <div class="cc-title">${escapeHtml(c.title)}</div>
+        <div class="cc-title">${escapeHtml(c.title)}${altTitleHtml(c.alt_title)}</div>
         <div class="story-meta">Ch. ${c.chapter_number}/${c.total_chapters} · ${pct}%</div>
         <div class="progress-bar" style="max-width:200px;"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
       </div>

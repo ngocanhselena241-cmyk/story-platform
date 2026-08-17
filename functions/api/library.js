@@ -7,7 +7,7 @@ export async function onRequestGet({ request, env }) {
   if (!user) return unauthorized();
 
   const { results: continueReading } = await env.DB.prepare(
-    `SELECT s.id AS story_id, s.title, c.chapter_number,
+    `SELECT s.id AS story_id, s.title, s.alt_title, c.chapter_number,
             (SELECT COUNT(*) FROM chapters c2 WHERE c2.story_id = s.id) AS total_chapters,
             rp.updated_at
      FROM reading_progress rp

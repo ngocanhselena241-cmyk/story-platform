@@ -112,7 +112,7 @@ async function load() {
       <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
         ${story.cover ? `<img src="${story.cover}" style="width:160px;border-radius:10px;">` : ""}
         <div style="flex:1;min-width:240px;">
-          <h1 style="margin-top:0;">${escapeHtml(story.title)} <span id="edit-slot"></span></h1>
+          <h1 style="margin-top:0;">${escapeHtml(story.title)}${altTitleHtml(story.alt_title)} <span id="edit-slot"></span></h1>
           <div class="story-meta">by ${escapeHtml(story.author_name)} · ${story.status} · <span class="meta-icon">${icon("star")}${rating}</span> (${story.rating_count} ratings) · <span class="meta-icon">${icon("eye")}${story.views}</span></div>
           <div style="margin:10px 0;">${genres}</div>
           <p>${escapeHtml(story.description)}</p>

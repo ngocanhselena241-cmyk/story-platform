@@ -184,6 +184,13 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// A story's optional second name, shown in parentheses right after the title
+// wherever that title appears. Empty string when the story doesn't have one.
+function altTitleHtml(altTitle) {
+  const alt = (altTitle || "").trim();
+  return alt ? ` <span class="alt-title">(${escapeHtml(alt)})</span>` : "";
+}
+
 function timeAgo(ts) {
   const seconds = Math.floor((Date.now() - ts) / 1000);
   const units = [["year", 31536000], ["month", 2592000], ["day", 86400], ["hour", 3600], ["minute", 60]];
@@ -327,12 +334,12 @@ function renderCoverCard(s) {
     <a class="cover-card" href="/story.html?id=${s.id}">
       ${coverEl}
       <div class="cover-info">
-        <div class="cover-title">${escapeHtml(s.title)}</div>
+        <div class="cover-title">${escapeHtml(s.title)}${altTitleHtml(s.alt_title)}</div>
         <span class="meta-icon">${icon("star")}${rating}</span> · <span class="meta-icon">${icon("eye")}${s.views}</span>${s.latest_chapter ? ` · Ch. ${s.latest_chapter}` : ""}
       </div>
     </a>
     <div class="cover-side">
-      <div class="cover-side-title">${escapeHtml(s.title)}</div>
+      <div class="cover-side-title">${escapeHtml(s.title)}${altTitleHtml(s.alt_title)}</div>
       <div>${tags}</div>
       <div class="cover-side-desc">${escapeHtml((s.description || "").slice(0, 400))}</div>
     </div>

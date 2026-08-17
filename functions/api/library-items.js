@@ -6,7 +6,7 @@ export async function onRequestGet({ request, env }) {
   if (!user) return unauthorized();
 
   const { results: items } = await env.DB.prepare(
-    `SELECT li.library_id, li.story_id, li.added_at, s.title, s.cover
+    `SELECT li.library_id, li.story_id, li.added_at, s.title, s.alt_title, s.cover
      FROM library_items li
      JOIN libraries lb ON lb.id = li.library_id
      JOIN stories s ON s.id = li.story_id

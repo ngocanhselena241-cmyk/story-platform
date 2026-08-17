@@ -142,7 +142,7 @@ async function loadPending() {
     const div = document.createElement("div");
     div.className = "card";
     div.innerHTML = `
-      <strong>${escapeHtml(s.title)}</strong> <span class="muted">by ${escapeHtml(s.author_name)}</span>
+      <strong>${escapeHtml(s.title)}</strong>${altTitleHtml(s.alt_title)} <span class="muted">by ${escapeHtml(s.author_name)}</span>
       <div style="margin-top:8px;">
         <button class="small approve-btn">Approve</button>
         <button class="small danger reject-btn">Reject</button>

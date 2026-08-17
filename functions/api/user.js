@@ -28,7 +28,7 @@ export async function onRequestGet({ request, env }) {
   let stories = [];
   if (user.role === "uploader" || user.role === "admin") {
     ({ results: stories } = await env.DB.prepare(
-      `SELECT s.id, s.title, s.cover, s.genres, s.description, s.views,
+      `SELECT s.id, s.title, s.alt_title, s.cover, s.genres, s.description, s.views,
               (SELECT MAX(chapter_number) FROM chapters c WHERE c.story_id = s.id) AS latest_chapter,
               (SELECT AVG(rating) FROM ratings r WHERE r.story_id = s.id) AS avg_rating
        FROM stories s WHERE s.author_id = ? AND s.approval_status = 'approved'

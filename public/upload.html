@@ -39,6 +39,8 @@ async function load() {
     <div class="section-title" id="story-form-title">New story</div>
     <label>Title</label>
     <input id="title">
+    <label>Alternative title (optional)</label>
+    <input id="alt-title" placeholder="Another name this story goes by">
     <label>Description</label>
     <textarea id="description" rows="3"></textarea>
     <label>Tags (comma-separated)</label>
@@ -100,7 +102,7 @@ async function loadMyStories() {
   document.getElementById("my-stories").innerHTML = stories.length
     ? stories.map(s => `<div class="card" style="display:flex;justify-content:space-between;align-items:center;">
         <div>
-          <strong>${escapeHtml(s.title)}</strong>
+          <strong>${escapeHtml(s.title)}</strong>${altTitleHtml(s.alt_title)}
           <span class="muted" style="font-size:0.8rem;"> · ${s.chapter_count} ch · ${s.approval_status}</span>
         </div>
         <button class="small manage-btn" data-id="${s.id}">Manage</button>
@@ -118,6 +120,7 @@ async function startEditing(storyId) {
   coverData = null;
   document.getElementById("story-form-title").textContent = "Edit story";
   document.getElementById("title").value = s.title;
+  document.getElementById("alt-title").value = s.alt_title || "";
   document.getElementById("description").value = s.description || "";
   document.getElementById("genres").value = s.genres || "";
   document.getElementById("status").value = s.status;
@@ -138,7 +141,7 @@ function resetForm() {
   editingStoryId = null;
   coverData = null;
   document.getElementById("story-form-title").textContent = "New story";
-  ["title", "description", "genres"].forEach(id => document.getElementById(id).value = "");
+  ["title", "alt-title", "description", "genres"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("status").value = "ongoing";
   document.getElementById("cover-preview").style.display = "none";
   document.getElementById("create-btn").textContent = "Create story";
@@ -167,6 +170,7 @@ async function loadChapters(storyId) {
 async function saveStory() {
   const payload = {
     title: document.getElementById("title").value,
+    alt_title: document.getElementById("alt-title").value,
     description: document.getElementById("description").value,
     genres: document.getElementById("genres").value,
     status: document.getElementById("status").value,

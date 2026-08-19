@@ -41,6 +41,10 @@ async function load() {
     <input id="title">
     <label>Alternative title (optional)</label>
     <input id="alt-title" placeholder="Another name this story goes by">
+    <label>Author (optional)</label>
+    <input id="credit-author" placeholder="Who wrote the story">
+    <label>Illustrator (optional)</label>
+    <input id="credit-illustrator" placeholder="Who drew the art">
     <label>Description</label>
     <textarea id="description" rows="3"></textarea>
     <label>Tags (comma-separated)</label>
@@ -121,6 +125,8 @@ async function startEditing(storyId) {
   document.getElementById("story-form-title").textContent = "Edit story";
   document.getElementById("title").value = s.title;
   document.getElementById("alt-title").value = s.alt_title || "";
+  document.getElementById("credit-author").value = s.credit_author || "";
+  document.getElementById("credit-illustrator").value = s.credit_illustrator || "";
   document.getElementById("description").value = s.description || "";
   document.getElementById("genres").value = s.genres || "";
   document.getElementById("status").value = s.status;
@@ -141,7 +147,7 @@ function resetForm() {
   editingStoryId = null;
   coverData = null;
   document.getElementById("story-form-title").textContent = "New story";
-  ["title", "alt-title", "description", "genres"].forEach(id => document.getElementById(id).value = "");
+  ["title", "alt-title", "credit-author", "credit-illustrator", "description", "genres"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("status").value = "ongoing";
   document.getElementById("cover-preview").style.display = "none";
   document.getElementById("create-btn").textContent = "Create story";
@@ -171,6 +177,8 @@ async function saveStory() {
   const payload = {
     title: document.getElementById("title").value,
     alt_title: document.getElementById("alt-title").value,
+    credit_author: document.getElementById("credit-author").value,
+    credit_illustrator: document.getElementById("credit-illustrator").value,
     description: document.getElementById("description").value,
     genres: document.getElementById("genres").value,
     status: document.getElementById("status").value,

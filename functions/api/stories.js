@@ -26,8 +26,12 @@ export async function onRequestGet({ request, env }) {
       params.push(`%${g}%`);
     });
   }
-  // Search looks at the alternative name too, so either title finds the story.
-  if (q) { sql += " AND (s.title LIKE ? OR s.alt_title LIKE ?)"; params.push(`%${q}%`, `%${q}%`); }
+  // Search covers both names plus the people credited, so looking up an author
+  // or an illustrator turns up everything they worked on.
+  if (q) {
+    sql += " AND (s.title LIKE ? OR s.alt_title LIKE ? OR s.credit_author LIKE ? OR s.credit_illustrator LIKE ?)";
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+  }
   if (status) { sql += " AND s.status = ?"; params.push(status); }
 
   if (sort === "rating") sql += " ORDER BY avg_rating DESC";
@@ -40,7 +44,7 @@ export async function onRequestGet({ request, env }) {
   return json({ stories: results });
 }
 
-// POST /api/stories  { title, alt_title, description, genres, status }  -- uploader or admin only
+// POST /api/stories  { title, alt_title, credit_author, credit_illustrator, description, genres, status }  -- uploader or admin only
 export async function onRequestPost({ request, env }) {
   const user = await getUser(request, env);
   if (!user) return unauthorized();
@@ -55,10 +59,12 @@ export async function onRequestPost({ request, env }) {
   if (body.cover && body.cover.length > 300000) return badRequest("Cover image is too large.");
 
   const result = await env.DB.prepare(
-    `INSERT INTO stories (title, alt_title, author_id, description, genres, status, approval_status, cover, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO stories (title, alt_title, credit_author, credit_illustrator, author_id, description, genres, status, approval_status, cover, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
-    body.title, (body.alt_title || "").trim(), user.id, body.description || "", body.genres || "",
+    body.title, (body.alt_title || "").trim(),
+    (body.credit_author || "").trim(), (body.credit_illustrator || "").trim(),
+    user.id, body.description || "", body.genres || "",
     body.status || "ongoing", approvalStatus, body.cover || null, now, now
   ).run();
 

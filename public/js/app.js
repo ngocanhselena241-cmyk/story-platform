@@ -191,6 +191,21 @@ function altTitleHtml(altTitle) {
   return alt ? ` <span class="alt-title">(${escapeHtml(alt)})</span>` : "";
 }
 
+// The people behind a story — the author who wrote it, the illustrator who
+// drew it. Only shown on the story page itself: the hover panel on a cover
+// card is crowded enough already. Empty string when neither is filled in.
+function creditsHtml(story) {
+  const parts = [
+    ["Author", (story.credit_author || "").trim()],
+    ["Illustrator", (story.credit_illustrator || "").trim()],
+  ].filter(([, name]) => name);
+  if (!parts.length) return "";
+  const line = parts
+    .map(([role, name]) => `<span class="credit-role">${role}</span> ${escapeHtml(name)}`)
+    .join(" · ");
+  return `<div class="story-credits">${line}</div>`;
+}
+
 function timeAgo(ts) {
   const seconds = Math.floor((Date.now() - ts) / 1000);
   const units = [["year", 31536000], ["month", 2592000], ["day", 86400], ["hour", 3600], ["minute", 60]];

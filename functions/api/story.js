@@ -24,7 +24,7 @@ export async function onRequestGet({ request, env }) {
   return json({ story, chapters });
 }
 
-// PUT /api/story  { id, title, alt_title, description, genres, status }  -- author or admin
+// PUT /api/story  { id, title, alt_title, credit_author, credit_illustrator, description, genres, status }  -- author or admin
 export async function onRequestPut({ request, env }) {
   const user = await getUser(request, env);
   if (!user) return unauthorized();
@@ -39,9 +39,11 @@ export async function onRequestPut({ request, env }) {
   if (body.cover && body.cover.length > 300000) return badRequest("Cover image is too large.");
 
   await env.DB.prepare(
-    `UPDATE stories SET title = ?, alt_title = ?, description = ?, genres = ?, status = ?, cover = COALESCE(?, cover), updated_at = ? WHERE id = ?`
+    `UPDATE stories SET title = ?, alt_title = ?, credit_author = ?, credit_illustrator = ?, description = ?, genres = ?, status = ?, cover = COALESCE(?, cover), updated_at = ? WHERE id = ?`
   ).bind(
-    body.title, (body.alt_title || "").trim(), body.description || "", body.genres || "", body.status || "ongoing",
+    body.title, (body.alt_title || "").trim(),
+    (body.credit_author || "").trim(), (body.credit_illustrator || "").trim(),
+    body.description || "", body.genres || "", body.status || "ongoing",
     body.cover || null, Date.now(), body.id
   ).run();
 

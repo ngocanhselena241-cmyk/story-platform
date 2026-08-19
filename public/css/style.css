@@ -274,6 +274,12 @@ label { display: block; margin: 14px 0 6px; font-size: 0.9rem; color: var(--text
 .alt-title { color: var(--text-muted); font-size: 0.82em; font-weight: 400; font-style: normal; }
 .cover-side .alt-title { color: rgba(255, 255, 255, 0.65); }
 
+/* Round 15: who wrote and who drew the story, sitting right under its title
+   on the story page. The names read at full strength, the role labels stay
+   quiet in front of them. */
+.story-credits { font-size: 0.9rem; color: var(--text); margin: -4px 0 6px; }
+.story-credits .credit-role { color: var(--text-muted); }
+
 /* ---- Round 6: side hover panel, titles on cards, scroll buttons ---- */
 .cover-wrap { position: relative; }
 .cover-card .cover-title {
